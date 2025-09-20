@@ -79,8 +79,7 @@ flowchart TD
 
 ### Development Environment
 
-- Node.js (version 16 or higher)
-- npm or yarn package manager
+- **Bun** (version 1.0 or higher) - This project uses Bun as the JavaScript runtime for faster package management and execution.
 - Environment variables for Spotify API credentials, OpenAI API key, and other secrets
 - Local development with Next.js dev server
 
@@ -106,13 +105,31 @@ flowchart TD
 - Run linting, formatting, and tests on pull requests
 - Deploy automatically on merge to main branch
 
+### Installing Bun
+
+This project uses Bun as the JavaScript runtime and package manager for faster performance. To install Bun, follow the instructions at [https://bun.sh/docs/installation](https://bun.sh/docs/installation).
+
+For macOS/Linux:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+For Windows:
+
+```powershell
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
 ### Local Setup Instructions
 
 1. Clone the repository
-2. Install dependencies with `npm install` or `yarn`
+2. Install dependencies with `bun install`
 3. Create a `.env.local` file with required environment variables
-4. Run the development server with `npm run dev` or `yarn dev`
+4. Run the development server with `bun run dev`
 5. Access the app at `http://localhost:3000`
+
+**Note:** The `bun.lock` file ensures consistent dependency versions across environments. Always use `bun install` and `bun run` commands to maintain compatibility with the project's Bun setup.
 
 ## Commit Message Conventions
 
