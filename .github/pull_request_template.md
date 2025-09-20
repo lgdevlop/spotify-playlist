@@ -70,8 +70,8 @@ No related issues, but this prepares ground for future improvements to DevContai
 Closes #...
 Depends on #...
 
----
+<!--
 
-> ℹ️ Please squash unnecessary commits before requesting a review.
->
-> 📚 Refer to `project-docs/merge-commit-guidelines.md` for commit message standards when merging.
+📚 Refer to `project-docs/merge-commit-guidelines.md` for commit message standards when merging.
+
+-->
