@@ -42,7 +42,7 @@ For **merge commits**, use this format:
 
 ## 🚀 Pull Request Requirements
 
-All PRs must use the standard [PR Template](./project-docs/pr-template.md). It includes:
+All PRs must use the standard [PR Template](.github/pull_request_template.md). This template is automatically pre-filled when creating a PR via GitHub and includes:
 
 - **What was done:** Begin with `This PR introduces:` followed by bullet points
 - **Why it matters:** Describe the problem and importance of the fix or feature
