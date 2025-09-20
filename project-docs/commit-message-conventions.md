@@ -22,19 +22,19 @@ We follow a format inspired by [Conventional Commits](https://www.conventionalco
 
 ## 🔠 Type Reference
 
-| Type      | Purpose                                      | Emoji | Example                                                |
-|-----------|----------------------------------------------|--------|---------------------------------------------------------|
-| `feat`    | Add a new feature                            | ✨     | `✨ feat(ai): improve playlist recommendation`         |
-| `fix`     | Bug fix                                      | 🐛     | `🐛 fix(auth): handle token refresh error`             |
-| `docs`    | Documentation update                         | 📝     | `📝 docs(README): update setup instructions`           |
-| `style`   | Code style change (no logic impact)          | 🎨     | `🎨 style(ui): adjust button spacing`                   |
-| `refactor`| Code refactor (no feature/bug fix)           | ♻️     | `♻️ refactor(backend): simplify API route handlers`    |
-| `perf`    | Performance improvement                      | ⚡     | `⚡ perf(spotify-api): optimize playlist fetch`         |
-| `test`    | Add or update tests                          | ✅     | `✅ test(frontend): add unit tests for playlist component` |
-| `build`   | Build-related changes                        | 📦     | `📦 build(ci): update Node.js version`                  |
-| `ci`      | CI/CD changes (pipelines, workflows)         | 👷     | `👷 ci(actions): add lint and test stages`              |
-| `chore`   | Other minor tasks (deps, tooling, cleanup)   | 🔧     | `🔧 chore(deps): update dependencies`                   |
-| `revert`  | Revert a previous commit                     | ⏪     | `⏪ revert(frontend): undo playlist preview changes`    |
+| Type       | Purpose                                      | Emoji | Example                                                |
+|------------|----------------------------------------------|--------|---------------------------------------------------------|
+| `feat`     | Add a new feature                            | ✨     | `✨ feat(frontend): add playlist preview feature`       |
+| `fix`      | Bug fix                                      | 🐛     | `🐛 fix(backend): handle API error`                     |
+| `docs`     | Documentation update                         | 📝     | `📝 docs(README): update setup instructions`           |
+| `style`    | Code style change (no logic impact)          | 🎨     | `🎨 style(ui): adjust button spacing`                   |
+| `refactor` | Code refactor (no feature/bug fix)           | ♻️     | `♻️ refactor(api): simplify route handlers`             |
+| `perf`     | Performance improvement                      | ⚡     | `⚡ perf(frontend): optimize rendering`                  |
+| `test`     | Add or update tests                          | ✅     | `✅ test(backend): add unit tests for API`              |
+| `build`    | Build-related changes                        | 📦     | `📦 build(ci): update Node.js version`                  |
+| `ci`       | CI/CD changes (pipelines, workflows)         | 👷     | `👷 ci(actions): add lint and test stages`              |
+| `chore`    | Other minor tasks (deps, tooling, cleanup)   | 🔧     | `🔧 chore(deps): update dependencies`                   |
+| `revert`   | Revert a previous commit                     | ⏪     | `⏪ revert(frontend): undo playlist preview changes`    |
 
 ---
 
@@ -44,9 +44,7 @@ We follow a format inspired by [Conventional Commits](https://www.conventionalco
 |--------------|--------------------------------------------------------------|
 | `frontend`   | User interface and client-side code                           |
 | `backend`    | Server-side API routes and business logic                     |
-| `auth`       | Authentication and authorization mechanisms                   |
-| `ai`         | AI service integration and playlist analysis                  |
-| `spotify-api`| Interactions with Spotify API                                 |
+| `api`        | API routes and integrations                                   |
 | `ui`         | UI components and styling                                     |
 | `config`     | Configuration files and settings                              |
 | `docs`       | Documentation files                                           |
