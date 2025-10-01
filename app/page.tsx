@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -19,6 +20,19 @@ export default function Home() {
         </ol>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
+        <Link
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="/about"
+        >
+          <Image
+            aria-hidden
+            src="/file.svg"
+            alt="Document icon"
+            width={16}
+            height={16}
+          />
+          About Us
+        </Link>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
           href="https://github.com/lgdevlop/spotify-playlist"
