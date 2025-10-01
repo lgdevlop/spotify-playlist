@@ -35,7 +35,47 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <header className="w-full flex items-center justify-between py-4 px-6 border-b border-gray-200 mb-8">
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.svg"
+              alt="AI Playlist Generator Logo"
+              width={32}
+              height={32}
+            />
+            <span className="font-bold text-lg tracking-tight">
+              AI Playlist Generator
+            </span>
+          </div>
+          <nav>
+            <a
+              href="https://github.com/lgdevlop/spotify-playlist"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-mono hover:underline underline-offset-4"
+            >
+              GitHub
+            </a>
+          </nav>
+        </header>
         {children}
+        <footer className="w-full flex items-center justify-center py-6 border-t border-gray-200 mt-12">
+          <a
+            className="flex items-center gap-2 text-sm font-mono hover:underline underline-offset-4"
+            href="https://github.com/lgdevlop/spotify-playlist"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="/globe.svg"
+              alt="Globe icon"
+              width={16}
+              height={16}
+              aria-hidden="true"
+            />
+            Go to project github →
+          </a>
+        </footer>
       </body>
     </html>
   );
