@@ -14,8 +14,8 @@ describe("Home Page", () => {
   it("renders the project links", () => {
     render(<Home />);
 
-    // Check if the GitHub link is present
-    const githubLink = screen.getByText("Go to project github →");
-    expect(githubLink).toBeDefined();
+    // Check that page instructional items are present
+    expect(screen.getByText("Learn more about the project.")).toBeDefined();
+    expect(screen.getByText("Try help the project grow.")).toBeDefined();
   });
 });
