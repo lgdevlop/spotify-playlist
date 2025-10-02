@@ -80,6 +80,14 @@ export function TopPlaylistsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mt-8 pb-2">
+          <Link
+            href="/"
+            className="inline-flex items-center text-green-600 hover:text-green-700 font-medium"
+          >
+            ← Back to Home
+          </Link>
+        </div>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Your Top 5 Spotify Playlists
@@ -181,15 +189,6 @@ export function TopPlaylistsPage() {
             ))}
           </div>
         )}
-
-        <div className="mt-8 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center text-green-600 hover:text-green-700 font-medium"
-          >
-            ← Back to Home
-          </Link>
-        </div>
       </div>
     </div>
   );
