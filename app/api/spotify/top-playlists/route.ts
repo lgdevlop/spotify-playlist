@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth/next";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
@@ -28,16 +28,27 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
 
     // Transform the data to include only necessary information
-    const playlists = data.items.map((playlist: any) => ({
-      id: playlist.id,
-      name: playlist.name,
-      description: playlist.description,
-      image: playlist.images?.[0]?.url || null,
-      tracks: playlist.tracks?.total || 0,
-      owner: playlist.owner?.display_name || "Unknown",
-      public: playlist.public,
-      external_urls: playlist.external_urls,
-    }));
+    const playlists = data.items.map(
+      (playlist: {
+        id: string;
+        name: string;
+        description: string;
+        images: Array<{ url: string }>;
+        tracks: { total: number };
+        owner: { display_name: string };
+        public: boolean;
+        external_urls: { spotify: string };
+      }) => ({
+        id: playlist.id,
+        name: playlist.name,
+        description: playlist.description,
+        image: playlist.images?.[0]?.url || null,
+        tracks: playlist.tracks?.total || 0,
+        owner: playlist.owner?.display_name || "Unknown",
+        public: playlist.public,
+        external_urls: playlist.external_urls,
+      })
+    );
 
     return NextResponse.json({ playlists });
   } catch (error) {
