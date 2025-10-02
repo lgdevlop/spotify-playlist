@@ -39,7 +39,7 @@ export default function RootLayout({
       >
         <header className="w-full flex items-center justify-between py-4 px-6 border-b border-gray-200 mb-8">
           <div className="flex items-center gap-2">
-            <img
+            <Image
               src="/logo.svg"
               alt="AI Playlist Generator Logo"
               width={32}

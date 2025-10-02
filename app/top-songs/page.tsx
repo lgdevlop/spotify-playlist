@@ -33,7 +33,7 @@ interface TopSongsResponse {
 }
 
 export function TopSongsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [topSongs, setTopSongs] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +148,11 @@ export function TopSongsPage() {
             <div className="mt-4 sm:mt-0">
               <select
                 value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as any)}
+                onChange={(e) =>
+                  setTimeRange(
+                    e.target.value as "short_term" | "medium_term" | "long_term"
+                  )
+                }
                 className="block w-full sm:w-auto px-3 py-2 border text-gray-900 border-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
               >
                 <option value="short_term">Last 4 weeks</option>
@@ -298,7 +302,7 @@ export function TopSongsPage() {
                 No songs found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                We couldn't find any top songs for the selected time period.
+                We cant find any top songs for the selected time period.
               </p>
             </div>
           )}

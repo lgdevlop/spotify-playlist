@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
       if (account && profile) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-        token.spotifyId = (profile as any).id;
+        token.spotifyId = (profile as { id: string }).id;
       }
       return token;
     },
