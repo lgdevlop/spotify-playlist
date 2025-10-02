@@ -2,6 +2,7 @@
 
 import { SessionProvider, signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 
 export function Home() {
   const { data: session, status } = useSession();
@@ -17,7 +18,7 @@ export function Home() {
   }
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <Image
           src="/logo.svg"
@@ -43,12 +44,20 @@ export function Home() {
               >
                 View My Top 5 Playlists
               </a>
-              <button
-                onClick={() => signOut()}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full"
-              >
-                Sign Out
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <a
+                  href="/top-songs"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
+                >
+                  View Top Songs
+                </a>
+                <button
+                  onClick={() => signOut()}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -73,6 +82,19 @@ export function Home() {
         )}
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
+        <Link
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="/about"
+        >
+          <Image
+            aria-hidden
+            src="/file.svg"
+            alt="Document icon"
+            width={16}
+            height={16}
+          />
+          About Us
+        </Link>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
           href="https://github.com/lgdevlop/spotify-playlist"

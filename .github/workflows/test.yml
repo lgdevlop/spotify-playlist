@@ -1,0 +1,35 @@
+name: Test
+
+on:
+  push:
+    branches: [master, main, develop, feature/*]
+  pull_request:
+    branches: [master, main, develop, feature/*]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Check test results
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "❌ Tests failed. Please fix the failing tests."
+            exit 1
+          else
+            echo "✅ All tests passed successfully!"
+          fi
