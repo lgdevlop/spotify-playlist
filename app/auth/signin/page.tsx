@@ -9,6 +9,7 @@ export default function SignIn() {
   useEffect(() => {
     const fetchProviders = async () => {
       const res = await getProviders();
+      //@ts-expect-error wrong type
       setProviders(res);
     };
     fetchProviders();
@@ -27,7 +28,8 @@ export default function SignIn() {
         </div>
         <div className="mt-8 space-y-6">
           {providers &&
-            Object.values(providers).map((provider) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            Object.values(providers).map((provider: any) => (
               <div key={provider.name}>
                 <button
                   onClick={() => signIn(provider.id, { callbackUrl: "/" })}
