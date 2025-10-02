@@ -1,8 +1,7 @@
 "use client";
 
-import { SessionProvider, signIn, signOut, useSession } from "next-auth/react";
+import { SessionProvider, signIn, useSession } from "next-auth/react";
 import Image from "next/image";
-import Link from "next/link";
 
 export function Home() {
   const { data: session, status } = useSession();
@@ -30,42 +29,44 @@ export function Home() {
 
         {session ? (
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            <h1 className="text-2xl font-bold text-white mb-4">
               Welcome, {session.user?.name}!
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-400 mb-6">
               You&apos;re successfully connected to Spotify. Ready to generate
               your personalized playlist?
             </p>
-            <div className="space-y-4">
+            <div className="space-y-4 flex flex-col gap-4 pb-4">
               <a
                 href="/top-playlists"
-                className="block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
               >
                 View My Top 5 Playlists
               </a>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a
-                  href="/top-songs"
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
-                >
-                  View Top Songs
-                </a>
-                <button
-                  onClick={() => signOut()}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full"
-                >
-                  Sign Out
-                </button>
-              </div>
+            </div>
+            <div className="space-y-4 flex flex-col gap-4  pb-4">
+              <a
+                href="/top-songs"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
+              >
+                View Top Songs
+              </a>
+            </div>
+            <div className="space-y-4 flex flex-col gap-4">
+              <a
+                href="/top-songs"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-center"
+              >
+                Log out
+              </a>
             </div>
           </div>
         ) : (
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            <h1 className="text-2xl font-bold text-white mb-4">
               AI Playlist Generator
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-400 mb-6">
               Connect your Spotify account to generate personalized playlists
               using AI based on your musical taste.
             </p>
@@ -81,36 +82,6 @@ export function Home() {
           </div>
         )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <Link
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="/about"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="Document icon"
-            width={16}
-            height={16}
-          />
-          About Us
-        </Link>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://github.com/lgdevlop/spotify-playlist"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to project github →
-        </a>
-      </footer>
     </div>
   );
 }

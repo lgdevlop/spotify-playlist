@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,33 +49,36 @@ export default function RootLayout({
               AI Playlist Generator
             </span>
           </div>
-          <nav>
-            <a
-              href="https://github.com/lgdevlop/spotify-playlist"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-mono hover:underline underline-offset-4"
-            >
-              GitHub
-            </a>
-          </nav>
         </header>
         {children}
-        <footer className="w-full flex items-center justify-center py-6 border-t border-gray-200 mt-12">
+        <footer className="w-full flex items-center gap-5 justify-center py-6 border-t border-gray-200 mt-12">
+          <Link
+            className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+            href="/about"
+          >
+            <Image
+              aria-hidden
+              src="/file.svg"
+              alt="Document icon"
+              width={16}
+              height={16}
+            />
+            About Us
+          </Link>
           <a
             className="flex items-center gap-2 text-sm font-mono hover:underline underline-offset-4"
             href="https://github.com/lgdevlop/spotify-playlist"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <img
+            <Image
               src="/globe.svg"
               alt="Globe icon"
               width={16}
               height={16}
               aria-hidden="true"
             />
-            Go to project github →
+            Github
           </a>
         </footer>
       </body>

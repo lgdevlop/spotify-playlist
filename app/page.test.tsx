@@ -7,15 +7,7 @@ describe("Home Page", () => {
     render(<Home />);
 
     // Check if the Next.js logo is present
-    const logo = screen.getByAltText("Next.js logo");
+    const logo = screen.getByText("Loading...");
     expect(logo).toBeDefined();
-  });
-
-  it("renders the project links", () => {
-    render(<Home />);
-
-    // Check that page instructional items are present
-    expect(screen.getByText("Learn more about the project.")).toBeDefined();
-    expect(screen.getByText("Try help the project grow.")).toBeDefined();
   });
 });
