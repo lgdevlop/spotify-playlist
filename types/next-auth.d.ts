@@ -13,5 +13,6 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     refreshToken?: string;
     spotifyId?: string;
+    expiresAt?: number;
   }
 }
