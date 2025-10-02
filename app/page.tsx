@@ -38,6 +38,12 @@ export function Home() {
               your personalized playlist?
             </p>
             <div className="space-y-4">
+              <a
+                href="/top-playlists"
+                className="block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
+              >
+                View My Top 5 Playlists
+              </a>
               <div className="flex flex-col sm:flex-row gap-4">
                 <a
                   href="/top-songs"
@@ -47,7 +53,7 @@ export function Home() {
                 </a>
                 <button
                   onClick={() => signOut()}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full"
                 >
                   Sign Out
                 </button>
