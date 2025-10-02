@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider, signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 
 export function Home() {
@@ -53,12 +53,12 @@ export function Home() {
               </a>
             </div>
             <div className="space-y-4 flex flex-col gap-4">
-              <a
-                href="/top-songs"
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
                 className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-center"
               >
                 Log out
-              </a>
+              </button>
             </div>
           </div>
         ) : (
@@ -86,10 +86,4 @@ export function Home() {
   );
 }
 
-export default function HomeWrapper() {
-  return (
-    <SessionProvider>
-      <Home />
-    </SessionProvider>
-  );
-}
+export default Home;

@@ -50,6 +50,12 @@ bun run dev
 3. Authorize the application in the Spotify popup
 4. You should be redirected back and logged in
 
+## Step 6: Test Logout
+
+1. After logging in, click the "Logout" button in the header or the "Log out" button on the main page
+2. You should be logged out and redirected to the home page
+3. To log in again, click "Sign in with Spotify" on the home page
+
 ## How It Works
 
 - **NextAuth Configuration**: The app uses NextAuth.js with the Spotify provider
