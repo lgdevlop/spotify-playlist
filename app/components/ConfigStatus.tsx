@@ -3,7 +3,7 @@
 import { useSpotifyConfig } from "@/app/hooks/useSpotifyConfig";
 
 export default function ConfigStatus() {
-  const { isConfigured, isValid, isLoading, error, shouldRedirectToConfig, redirectToConfig } = useSpotifyConfig();
+  const { isConfigured, isValid, isLoading, redirectToConfig } = useSpotifyConfig();
 
   if (isLoading) {
     return (

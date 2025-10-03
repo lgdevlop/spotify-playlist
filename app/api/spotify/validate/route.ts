@@ -4,10 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const { clientId, clientSecret } = await request.json();
 
-    console.log('clientId:', clientId)
-    console.log('clientSecret:', clientSecret)
-
-    if (!clientSecret || !clientSecret) {
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
         { valid: false, error: "Client ID and Client Secret are required" },
         { status: 400 }

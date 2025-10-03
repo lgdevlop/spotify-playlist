@@ -1,6 +1,5 @@
 import SpotifyProvider from "next-auth/providers/spotify";
 import type { SessionStrategy } from "next-auth";
-import { logSecurityEvent, SecurityEventType } from "./security-logger";
 
 // Store current credentials for token refresh
 let currentCredentials: { clientId?: string; clientSecret?: string } = {};

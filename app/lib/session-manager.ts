@@ -1,4 +1,3 @@
-import type { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { encrypt, decrypt } from './crypto';
 import type { EncryptedData } from './crypto';
