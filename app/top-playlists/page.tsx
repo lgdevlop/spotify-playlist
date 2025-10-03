@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ interface Playlist {
   };
 }
 
-export function TopPlaylistsPage() {
+export default function TopPlaylistsPage() {
   const { data: session, status } = useSession();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,13 +192,5 @@ export function TopPlaylistsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function TopPlaylistsPageWrapper() {
-  return (
-    <SessionProvider>
-      <TopPlaylistsPage />
-    </SessionProvider>
   );
 }

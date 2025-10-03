@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -32,7 +32,7 @@ interface TopSongsResponse {
   items: Track[];
 }
 
-export function TopSongsPage() {
+export default function TopSongsPage() {
   const { status } = useSession();
   const router = useRouter();
   const [topSongs, setTopSongs] = useState<Track[]>([]);
@@ -309,13 +309,5 @@ export function TopSongsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function TopSongsPageWrapper() {
-  return (
-    <SessionProvider>
-      <TopSongsPage />
-    </SessionProvider>
   );
 }
