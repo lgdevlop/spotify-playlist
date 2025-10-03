@@ -1,10 +1,12 @@
 import SpotifyProvider from "next-auth/providers/spotify";
-import type { SessionStrategy } from "next-auth";
+import type { SessionStrategy, Account, Profile, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { AuthConfig } from "../../types";
 
 // Store current credentials for token refresh
 let currentCredentials: { clientId?: string; clientSecret?: string } = {};
 
-export const authOptions = (credentials?: { clientId: string; clientSecret: string }) => {
+export const authOptions = (credentials?: AuthConfig) => {
   const clientId = credentials?.clientId || process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = credentials?.clientSecret || process.env.SPOTIFY_CLIENT_SECRET;
 
@@ -38,9 +40,7 @@ export const authOptions = (credentials?: { clientId: string; clientSecret: stri
       strategy: "jwt" as SessionStrategy,
     },
     callbacks: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      async jwt(params: any) {
-        const { token, account, profile } = params;
+      async jwt({ token, account, profile }: { token: JWT, account?: Account | null, profile?: Profile | null }) {
         if (account && profile) {
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
@@ -65,7 +65,13 @@ export const authOptions = (credentials?: { clientId: string; clientSecret: stri
               }),
             });
 
-            const data = await response.json() as any;
+            const data = await response.json() as {
+              access_token: string;
+              token_type: string;
+              expires_in: number;
+              refresh_token?: string;
+              scope?: string;
+            };
 
             if (response.ok) {
               token.accessToken = data.access_token;
@@ -84,9 +90,7 @@ export const authOptions = (credentials?: { clientId: string; clientSecret: stri
 
         return token;
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      async session(params: any) {
-        const { session, token } = params;
+      async session({ session, token }: { session: Session, token: JWT }) {
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
         session.spotifyId = token.spotifyId;

@@ -142,7 +142,7 @@ export default function Config() {
               id="clientId"
               type="text"
               value={clientId}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientId((e.target as HTMLInputElement).value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientId(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Your Spotify Client ID"
             />

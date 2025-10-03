@@ -1,5 +1,6 @@
 import type { NextApiRequest } from 'next';
 import type { NextRequest } from 'next/server';
+import type { SecurityLogEntry } from '../../types';
 
 export enum SecurityEventType {
   SESSION_CREATED = 'SESSION_CREATED',
@@ -16,25 +17,15 @@ export enum SecurityEventType {
   SESSION_INACTIVITY = 'SESSION_INACTIVITY',
 }
 
-export interface SecurityLogEntry {
-  timestamp: number;
-  eventType: SecurityEventType;
-  userAgent?: string;
-  ip?: string;
-  sessionId?: string;
-  details?: Record<string, any>;
-  error?: string;
-}
-
 /**
  * Sanitizes sensitive data from log entries
  */
-function sanitizeLogData(data: any): any {
+function sanitizeLogData(data: unknown): unknown {
   if (typeof data !== 'object' || data === null) {
     return data;
   }
 
-  const sanitized = { ...data };
+  const sanitized = { ...(data as Record<string, unknown>) };
 
   // Remove or mask sensitive fields
   const sensitiveFields = [
@@ -69,14 +60,21 @@ function sanitizeLogData(data: any): any {
  * Extracts client information from request
  */
 function extractClientInfo(req: NextApiRequest | NextRequest): { userAgent?: string; ip?: string } {
-  const headers = req.headers as any;
+  const headers = req.headers as unknown as Record<string, string | string[]> & { get?: (key: string) => string | null };
+
+  const getHeaderValue = (key: string): string | undefined => {
+    if (headers.get) {
+      return headers.get(key) || undefined;
+    }
+    const value = headers[key];
+    return Array.isArray(value) ? value[0] : value;
+  };
 
   return {
-    userAgent: headers.get ? headers.get('user-agent') : headers['user-agent'],
-    ip: headers.get ? headers.get('x-forwarded-for') || headers.get('x-real-ip') :
-        headers['x-forwarded-for'] || headers['x-real-ip'] ||
-        (req as any).connection?.remoteAddress ||
-        (req as any).socket?.remoteAddress,
+    userAgent: getHeaderValue('user-agent'),
+    ip: getHeaderValue('x-forwarded-for') || getHeaderValue('x-real-ip') ||
+        (req as unknown as { connection?: { remoteAddress?: string }; socket?: { remoteAddress?: string } }).connection?.remoteAddress ||
+        (req as unknown as { connection?: { remoteAddress?: string }; socket?: { remoteAddress?: string } }).socket?.remoteAddress,
   };
 }
 
@@ -103,14 +101,14 @@ export class SecurityLogger {
   log(
     eventType: SecurityEventType,
     req?: NextApiRequest | NextRequest,
-    details?: Record<string, any>,
+    details?: Record<string, unknown>,
     error?: Error | string
   ): void {
     const entry: SecurityLogEntry = {
       timestamp: Date.now(),
       eventType,
       ...extractClientInfo(req || ({} as NextApiRequest)),
-      details: details ? sanitizeLogData(details) : undefined,
+      details: details ? sanitizeLogData(details) as Record<string, unknown> : undefined,
       error: error ? (typeof error === 'string' ? error : error.message) : undefined,
     };
 
@@ -159,6 +157,6 @@ export const securityLogger = SecurityLogger.getInstance();
 export const logSecurityEvent = (
   eventType: SecurityEventType,
   req?: NextApiRequest | NextRequest,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
   error?: Error | string
 ) => securityLogger.log(eventType, req, details, error);

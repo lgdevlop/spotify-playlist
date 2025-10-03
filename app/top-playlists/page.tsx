@@ -5,18 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-interface Playlist {
-  id: string;
-  name: string;
-  description: string;
-  image: string | null;
-  tracks: number;
-  owner: string;
-  public: boolean;
-  external_urls: {
-    spotify: string;
-  };
-}
+import type { ApiResponse, Playlist } from "@/types";
 
 export default function TopPlaylistsPage() {
   const { data: session, status } = useSession();
@@ -39,8 +28,12 @@ export default function TopPlaylistsPage() {
         throw new Error("Failed to fetch playlists");
       }
 
-      const data = await response.json();
-      setPlaylists(data.playlists);
+      const apiResponse: ApiResponse<Playlist[]> = await response.json();
+      if (apiResponse.success && apiResponse.data) {
+        setPlaylists(apiResponse.data);
+      } else {
+        throw new Error(apiResponse.error || "Failed to fetch playlists");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SpotifyConfig, ValidationResult } from "@/types";
+
+interface SpotifyTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { clientId, clientSecret } = await request.json();
+    const body: SpotifyConfig = await request.json();
+    const { clientId, clientSecret } = body;
 
     if (!clientId || !clientSecret) {
-      return NextResponse.json(
-        { valid: false, error: "Client ID and Client Secret are required" },
-        { status: 400 }
-      );
+      const result: ValidationResult = { valid: false, error: "Client ID and Client Secret are required" };
+      return NextResponse.json(result, { status: 400 });
     }
 
     // Testar as credenciais fazendo uma chamada para o endpoint de token do Spotify
@@ -27,23 +33,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: SpotifyTokenResponse = await response.json();
       if (data.access_token) {
-        return NextResponse.json({ valid: true });
+        const result: ValidationResult = { valid: true };
+        return NextResponse.json(result);
       }
     }
 
     // Se chegou aqui, as credenciais são inválidas
-    return NextResponse.json(
-      { valid: false, error: "Invalid Spotify credentials" },
-      { status: 401 }
-    );
+    const result: ValidationResult = { valid: false, error: "Invalid Spotify credentials" };
+    return NextResponse.json(result, { status: 401 });
 
   } catch (error) {
     console.error("Error validating Spotify credentials:", error);
-    return NextResponse.json(
-      { valid: false, error: "Failed to validate credentials" },
-      { status: 500 }
-    );
+    const result: ValidationResult = { valid: false, error: "Failed to validate credentials" };
+    return NextResponse.json(result, { status: 500 });
   }
 }

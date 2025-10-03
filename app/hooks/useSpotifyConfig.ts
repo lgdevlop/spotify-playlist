@@ -2,19 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-
-export interface SpotifyConfig {
-  clientId: string;
-  clientSecret: string;
-}
-
-export interface ConfigStatus {
-  isConfigured: boolean;
-  isValid: boolean;
-  isLoading: boolean;
-  error: string | null;
-  config: SpotifyConfig | null;
-}
+import type { SpotifyConfig, ConfigStatus, ValidationResult } from "@/types";
 
 export function useSpotifyConfig() {
   const router = useRouter();
@@ -34,7 +22,7 @@ export function useSpotifyConfig() {
         throw new Error("Failed to fetch config");
       }
 
-      const config = await response.json();
+      const config: SpotifyConfig = await response.json();
 
       if (config.clientId && config.clientSecret) {
         return config;
@@ -62,7 +50,7 @@ export function useSpotifyConfig() {
         return false;
       }
 
-      const result = await response.json();
+      const result: ValidationResult = await response.json();
       return result.valid === true;
     } catch (error) {
       console.error("Error validating credentials:", error);
@@ -72,7 +60,7 @@ export function useSpotifyConfig() {
 
   // Atualizar status da configuração
   const updateStatus = useCallback(async () => {
-    setStatus(prev => ({ ...prev, isLoading: true, error: null }));
+    setStatus((prev: ConfigStatus) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const config = await checkConfiguration();
