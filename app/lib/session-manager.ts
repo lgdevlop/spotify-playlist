@@ -117,6 +117,7 @@ export async function storeSpotifyConfig(config: Omit<SpotifyConfig, 'clientSecr
  */
 export async function getSpotifyConfig(): Promise<SpotifyConfig | null> {
   const session = await getSessionData();
+  
   if (!session?.spotifyConfig) {
     return null;
   }

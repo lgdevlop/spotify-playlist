@@ -12,9 +12,6 @@ export const authOptions = (credentials?: { clientId: string; clientSecret: stri
   // Store credentials for token refresh
   currentCredentials = { clientId, clientSecret };
 
-  console.log('authOptions clientId:', clientId ? 'defined' : 'undefined');
-  console.log('authOptions clientSecret:', clientSecret ? 'defined' : 'undefined');
-
   const providers = [];
   if (clientId && clientSecret) {
     try {
