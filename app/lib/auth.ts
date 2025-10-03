@@ -1,38 +1,19 @@
 import SpotifyProvider from "next-auth/providers/spotify";
-import fs from "fs";
-import path from "path";
 import type { SessionStrategy } from "next-auth";
+import { logSecurityEvent, SecurityEventType } from "./security-logger";
 
-const configFilePath = path.join(process.cwd(), "spotify-config.json");
+// Store current credentials for token refresh
+let currentCredentials: { clientId?: string; clientSecret?: string } = {};
 
-function getSpotifyCredentials() {
-  let clientId = process.env.SPOTIFY_CLIENT_ID;
-  let clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+export const authOptions = (credentials?: { clientId: string; clientSecret: string }) => {
+  const clientId = credentials?.clientId || process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = credentials?.clientSecret || process.env.SPOTIFY_CLIENT_SECRET;
 
-  // Always check config file to get the latest values
-  // This ensures dynamic updates are reflected immediately
-  try {
-    if (fs.existsSync(configFilePath)) {
-      const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
-      // Use config file values if they exist, otherwise fall back to env vars
-      clientId = config.clientId || clientId;
-      clientSecret = config.clientSecret || clientSecret;
-    }
-  } catch (error) {
-    console.error("Error reading config file:", error);
-  }
+  // Store credentials for token refresh
+  currentCredentials = { clientId, clientSecret };
 
-  console.log('getSpotifyCredentials - clientId:', clientId ? 'defined' : 'undefined');
-  console.log('getSpotifyCredentials - clientSecret:', clientSecret ? 'defined' : 'undefined');
-
-  return { clientId, clientSecret };
-}
-
-export const authOptions = () => {
-  const { clientId, clientSecret } = getSpotifyCredentials();
-
-  console.log('authOptions clientId:', clientId)
-  console.log('authOptions clientSecret:', clientSecret)
+  console.log('authOptions clientId:', clientId ? 'defined' : 'undefined');
+  console.log('authOptions clientSecret:', clientSecret ? 'defined' : 'undefined');
 
   const providers = [];
   if (clientId && clientSecret) {
@@ -74,8 +55,7 @@ export const authOptions = () => {
         // Refresh the token if it's expired
         if (token.expiresAt && Date.now() / 1000 > token.expiresAt) {
           try {
-            // Get fresh credentials for token refresh
-            const freshCredentials = getSpotifyCredentials();
+            // Use stored credentials for token refresh
             const response = await fetch("https://accounts.spotify.com/api/token", {
               method: "POST",
               headers: {
@@ -84,12 +64,12 @@ export const authOptions = () => {
               body: new URLSearchParams({
                 grant_type: "refresh_token",
                 refresh_token: token.refreshToken as string,
-                client_id: freshCredentials.clientId!,
-                client_secret: freshCredentials.clientSecret!,
+                client_id: currentCredentials.clientId!,
+                client_secret: currentCredentials.clientSecret!,
               }),
             });
 
-            const data = await response.json();
+            const data = await response.json() as any;
 
             if (response.ok) {
               token.accessToken = data.access_token;

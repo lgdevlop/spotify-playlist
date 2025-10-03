@@ -7,23 +7,38 @@ import { useSpotifyConfig } from "../hooks/useSpotifyConfig";
 export default function Config() {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [redirectUri, setRedirectUri] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
   const { updateStatus } = useSpotifyConfig();
 
   useEffect(() => {
-    // Load from localStorage
-    const savedClientId = localStorage.getItem("SPOTIFY_CLIENT_ID") || "";
-    const savedClientSecret = localStorage.getItem("SPOTIFY_CLIENT_SECRET") || "";
-    setClientId(savedClientId);
-    setClientSecret(savedClientSecret);
+    // Load from server
+    const loadConfig = async () => {
+      try {
+        const response = await fetch("/api/config");
+        if (response.ok) {
+          const config = await response.json() as { clientId: string; clientSecret: string; redirectUri: string };
+          setClientId(config.clientId || "");
+          setClientSecret(config.clientSecret || "");
+          setRedirectUri(config.redirectUri || "");
+        }
+      } catch (error) {
+        console.error("Error loading config:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadConfig();
   }, []);
 
   const handleSave = async () => {
-    if (!clientId || !clientSecret) {
-      alert("Please fill in both fields.");
+    if (!clientId || !clientSecret || !redirectUri) {
+      alert("Please fill in all fields.");
       return;
     }
 
@@ -40,7 +55,7 @@ export default function Config() {
         body: JSON.stringify({ clientId, clientSecret }),
       });
 
-      const validationResult = await validationResponse.json();
+      const validationResult = await validationResponse.json() as { valid: boolean; error?: string };
 
       if (!validationResult.valid) {
         setValidationError(validationResult.error || "Invalid Spotify credentials");
@@ -54,16 +69,12 @@ export default function Config() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ clientId, clientSecret }),
+        body: JSON.stringify({ clientId, clientSecret, redirectUri }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to save credentials");
       }
-
-      // Save to localStorage for client-side persistence
-      localStorage.setItem("SPOTIFY_CLIENT_ID", clientId);
-      localStorage.setItem("SPOTIFY_CLIENT_SECRET", clientSecret);
 
       // Update the config status
       await updateStatus();
@@ -131,7 +142,7 @@ export default function Config() {
               id="clientId"
               type="text"
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientId((e.target as HTMLInputElement).value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Your Spotify Client ID"
             />
@@ -144,9 +155,22 @@ export default function Config() {
               id="clientSecret"
               type="password"
               value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientSecret(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Your Spotify Client Secret"
+            />
+          </div>
+          <div>
+            <label htmlFor="redirectUri" className="block text-sm font-medium text-gray-700">
+              Redirect URI
+            </label>
+            <input
+              id="redirectUri"
+              type="text"
+              value={redirectUri}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRedirectUri(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+              placeholder="http://localhost:3000/api/auth/callback/spotify"
             />
           </div>
           <div>
