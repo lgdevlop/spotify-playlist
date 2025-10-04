@@ -1,13 +1,48 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
+import type { ApiResponse } from "@/types";
+
+interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  images: Array<{ url: string }>;
+  tracks: { total: number };
+  owner: { display_name: string };
+  public: boolean;
+  external_urls: { spotify: string };
+}
+
+interface SpotifyPlaylistsResponse {
+  items: SpotifyPlaylist[];
+}
+
+interface TransformedPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  image: string | null;
+  tracks: number;
+  owner: string;
+  public: boolean;
+  external_urls: { spotify: string };
+}
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    // Recuperar credenciais da sessão para passar para authOptions
+    const { getSpotifyConfig } = await import("@/app/lib/session-manager");
+    const credentials = await getSpotifyConfig();
+    
+    const session = await getServerSession(authOptions(credentials ? {
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret
+    } : undefined));
 
     if (!session?.accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const result: ApiResponse<TransformedPlaylist[]> = { success: false, error: "Unauthorized" };
+      return NextResponse.json(result, { status: 401 });
     }
 
     // Fetch user's playlists from Spotify
@@ -25,37 +60,25 @@ export async function GET() {
       throw new Error(`Spotify API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: SpotifyPlaylistsResponse = await response.json();
 
     // Transform the data to include only necessary information
-    const playlists = data.items.map(
-      (playlist: {
-        id: string;
-        name: string;
-        description: string;
-        images: Array<{ url: string }>;
-        tracks: { total: number };
-        owner: { display_name: string };
-        public: boolean;
-        external_urls: { spotify: string };
-      }) => ({
-        id: playlist.id,
-        name: playlist.name,
-        description: playlist.description,
-        image: playlist.images?.[0]?.url || null,
-        tracks: playlist.tracks?.total || 0,
-        owner: playlist.owner?.display_name || "Unknown",
-        public: playlist.public,
-        external_urls: playlist.external_urls,
-      })
-    );
+    const playlists: TransformedPlaylist[] = data.items.map((playlist: SpotifyPlaylist) => ({
+      id: playlist.id,
+      name: playlist.name,
+      description: playlist.description,
+      image: playlist.images?.[0]?.url || null,
+      tracks: playlist.tracks?.total || 0,
+      owner: playlist.owner?.display_name || "Unknown",
+      public: playlist.public,
+      external_urls: playlist.external_urls,
+    }));
 
-    return NextResponse.json({ playlists });
+    const result: ApiResponse<TransformedPlaylist[]> = { success: true, data: playlists };
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching playlists:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch playlists" },
-      { status: 500 }
-    );
+    const result: ApiResponse<TransformedPlaylist[]> = { success: false, error: "Failed to fetch playlists" };
+    return NextResponse.json(result, { status: 500 });
   }
 }

@@ -2,10 +2,21 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
+import { useEffect } from "react";
+import { useSpotifyConfig } from "./hooks/useSpotifyConfig";
 
-export function Home() {
+export default function Home() {
   const { data: session, status } = useSession();
-  if (status === "loading") {
+  const { shouldRedirectToConfig, redirectToConfig, isLoading: configLoading } = useSpotifyConfig();
+
+  // Redirecionar para configuração se necessário
+  useEffect(() => {
+    if (shouldRedirectToConfig && !session) {
+      redirectToConfig();
+    }
+  }, [shouldRedirectToConfig, redirectToConfig, session]);
+
+  if (status === "loading" || configLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -85,5 +96,3 @@ export function Home() {
     </div>
   );
 }
-
-export default Home;

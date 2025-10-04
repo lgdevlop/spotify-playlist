@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import ConfigStatus from "./ConfigStatus";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -20,14 +21,23 @@ export default function Header() {
           AI Playlist Generator
         </span>
       </div>
-      {session && (
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+      <div className="flex items-center gap-4">
+        <ConfigStatus />
+        <Link
+          href="/config"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          Logout
-        </button>
-      )}
+          Config
+        </Link>
+        {session && (
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            Logout
+          </button>
+        )}
+      </div>
     </header>
   );
 }

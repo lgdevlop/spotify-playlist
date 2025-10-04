@@ -1,39 +1,14 @@
 "use client";
 
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-interface Track {
-  id: string;
-  name: string;
-  artists: Array<{
-    id: string;
-    name: string;
-  }>;
-  album: {
-    id: string;
-    name: string;
-    images: Array<{
-      url: string;
-      height: number;
-      width: number;
-    }>;
-  };
-  external_urls: {
-    spotify: string;
-  };
-  duration_ms: number;
-  popularity: number;
-}
+import type { TopSongsResponse, Track } from "@/types";
 
-interface TopSongsResponse {
-  items: Track[];
-}
-
-export function TopSongsPage() {
+export default function TopSongsPage() {
   const { status } = useSession();
   const router = useRouter();
   const [topSongs, setTopSongs] = useState<Track[]>([]);
@@ -43,18 +18,7 @@ export function TopSongsPage() {
     "short_term" | "medium_term" | "long_term"
   >("short_term");
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-      return;
-    }
-
-    if (status === "authenticated") {
-      fetchTopSongs();
-    }
-  }, [status, timeRange]);
-
-  const fetchTopSongs = async () => {
+  const fetchTopSongs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -74,7 +38,18 @@ export function TopSongsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchTopSongs();
+    }
+  }, [status, fetchTopSongs]);
 
   const formatDuration = (ms: number) => {
     const minutes = Math.floor(ms / 60000);
@@ -136,7 +111,7 @@ export function TopSongsPage() {
             <div className="mt-4 sm:mt-0">
               <select
                 value={timeRange}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   setTimeRange(
                     e.target.value as "short_term" | "medium_term" | "long_term"
                   )
@@ -203,7 +178,7 @@ export function TopSongsPage() {
                   </div>
 
                   <div className="flex-shrink-0">
-                    {track.album.images.length > 0 ? (
+                    {track.album.images.length > 0 && track.album.images[0] ? (
                       <Image
                         src={track.album.images[0].url}
                         alt={`${track.album.name} album cover`}
@@ -297,13 +272,5 @@ export function TopSongsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function TopSongsPageWrapper() {
-  return (
-    <SessionProvider>
-      <TopSongsPage />
-    </SessionProvider>
   );
 }
