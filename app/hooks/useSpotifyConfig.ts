@@ -14,36 +14,22 @@ export function useSpotifyConfig() {
     config: null,
   });
 
-  // Verificar se as credenciais estão configuradas
-  const checkConfiguration = useCallback(async (): Promise<SpotifyConfig | null> => {
-    try {
-      const response = await fetch("/api/config");
-      if (!response.ok) {
-        throw new Error("Failed to fetch config");
-      }
-
-      const config: SpotifyConfig = await response.json();
-
-      if (config.clientId && config.clientSecret) {
-        return config;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error checking configuration:", error);
-      return null;
-    }
-  }, []);
 
   // Validar credenciais com a API do Spotify
-  const validateCredentials = useCallback(async (config: SpotifyConfig): Promise<boolean> => {
+  const validateCredentials = useCallback(async (config: SpotifyConfig & { source?: string }): Promise<boolean> => {
     try {
+      const requestBody = {
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        useEnvVars: config.source === 'env' // Use env vars for validation when source is 'env'
+      };
+
       const response = await fetch("/api/spotify/validate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(config),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -63,9 +49,15 @@ export function useSpotifyConfig() {
     setStatus((prev: ConfigStatus) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const config = await checkConfiguration();
+      // Get raw config response to preserve source information
+      const response = await fetch("/api/config");
+      if (!response.ok) {
+        throw new Error("Failed to fetch config");
+      }
 
-      if (!config) {
+      const rawConfig = await response.json();
+
+      if (!rawConfig.clientId || !rawConfig.clientSecret || rawConfig.clientSecret === "") {
         setStatus({
           isConfigured: false,
           isValid: false,
@@ -76,7 +68,20 @@ export function useSpotifyConfig() {
         return;
       }
 
-      const isValid = await validateCredentials(config);
+      // Create config object for validation
+      const configForValidation = {
+        clientId: rawConfig.clientId,
+        clientSecret: rawConfig.clientSecret,
+        source: rawConfig.source
+      };
+
+      const isValid = await validateCredentials(configForValidation);
+
+      // Create config object for status (without source)
+      const config: SpotifyConfig = {
+        clientId: rawConfig.clientId,
+        clientSecret: rawConfig.clientSecret
+      };
 
       setStatus({
         isConfigured: true,
@@ -94,7 +99,7 @@ export function useSpotifyConfig() {
         config: null,
       });
     }
-  }, [checkConfiguration, validateCredentials]);
+  }, [validateCredentials]);
 
   // Redirecionar para configuração se necessário
   const redirectToConfig = useCallback(() => {

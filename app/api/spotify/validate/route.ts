@@ -9,17 +9,26 @@ interface SpotifyTokenResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SpotifyConfig = await request.json();
-    const { clientId, clientSecret } = body;
+    const body: SpotifyConfig & { useEnvVars?: boolean } = await request.json();
+    const { clientId, clientSecret, useEnvVars } = body;
 
-    if (!clientId || !clientSecret) {
+    // If useEnvVars is true, validate using environment variables instead
+    let actualClientId = clientId;
+    let actualClientSecret = clientSecret;
+
+    if (useEnvVars) {
+      actualClientId = process.env.SPOTIFY_CLIENT_ID || '';
+      actualClientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
+    }
+
+    if (!actualClientId || !actualClientSecret) {
       const result: ValidationResult = { valid: false, error: "Client ID and Client Secret are required" };
       return NextResponse.json(result, { status: 400 });
     }
 
     // Testar as credenciais fazendo uma chamada para o endpoint de token do Spotify
     // Usamos o fluxo client_credentials para testar se as credenciais são válidas
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const authString = Buffer.from(`${actualClientId}:${actualClientSecret}`).toString('base64');
 
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',

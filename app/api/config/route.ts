@@ -64,17 +64,37 @@ export async function POST(request: NextRequest) {
 // GET handler
 export async function GET(request: NextRequest) {
   try {
-    if (!(await isSessionValid())) {
-      logSecurityEvent(SecurityEventType.CONFIG_RETRIEVED, request, { sessionValid: false });
-      const response = NextResponse.json({ clientId: "", clientSecret: "", redirectUri: "" });
+    const sessionValid = await isSessionValid();
+
+    if (sessionValid) {
+      // If session is valid, return session credentials
+      const config = await getSpotifyConfig();
+      logSecurityEvent(SecurityEventType.CONFIG_RETRIEVED, request, { hasCredentials: !!config, source: 'session' });
+      const response = NextResponse.json(config || { clientId: "", clientSecret: "", redirectUri: "" });
       return addSecurityHeaders(response);
+    } else {
+      // If no session credentials, check for environment variables as fallback
+      const envClientId = process.env.SPOTIFY_CLIENT_ID;
+      const envClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+      if (envClientId && envClientSecret) {
+        // Return environment variables (but don't include actual secrets in response for security)
+        // We'll return a flag indicating env vars are available
+        logSecurityEvent(SecurityEventType.CONFIG_RETRIEVED, request, { hasCredentials: true, source: 'env' });
+        const response = NextResponse.json({
+          clientId: envClientId,
+          clientSecret: "env_var_present", // Placeholder to indicate env var is available
+          redirectUri: "",
+          source: 'env' // Indicate this came from environment variables
+        });
+        return addSecurityHeaders(response);
+      } else {
+        // No credentials available
+        logSecurityEvent(SecurityEventType.CONFIG_RETRIEVED, request, { hasCredentials: false, source: 'none' });
+        const response = NextResponse.json({ clientId: "", clientSecret: "", redirectUri: "" });
+        return addSecurityHeaders(response);
+      }
     }
-
-    const config = await getSpotifyConfig();
-    logSecurityEvent(SecurityEventType.CONFIG_RETRIEVED, request, { hasCredentials: !!config });
-
-    const response = NextResponse.json(config || { clientId: "", clientSecret: "", redirectUri: "" });
-    return addSecurityHeaders(response);
   } catch (error) {
     console.error("Error reading config:", error);
     logSecurityEvent(SecurityEventType.DECRYPTION_ERROR, request, {}, error as Error);
