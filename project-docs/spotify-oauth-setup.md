@@ -22,8 +22,10 @@ This document outlines the steps required to set up Spotify OAuth authentication
 2. Fill in the following variables:
    - `SPOTIFY_CLIENT_ID`: Your Spotify app's Client ID
    - `SPOTIFY_CLIENT_SECRET`: Your Spotify app's Client Secret
-   - `NEXTAUTH_URL`: `http://localhost:3000` (for local development)
-   - `NEXTAUTH_SECRET`: Generate a secure random string (32 characters or more)
+   - `SPOTIFY_ENCRYPTION_KEY`: A 64-character hexadecimal encryption key (32 bytes). Generate with `openssl rand -hex 32`
+   - `SPOTIFY_REDIRECT_URI`: `http://127.0.0.1:3000/api/auth/callback/spotify`
+   - `NEXTAUTH_URL`: `http://127.0.0.1:3000` (for local development)
+   - `NEXTAUTH_SECRET`: A secure random string (32+ characters)
 
 To generate a secure NEXTAUTH_SECRET, run:
 
@@ -31,13 +33,19 @@ To generate a secure NEXTAUTH_SECRET, run:
 openssl rand -base64 32
 ```
 
+Note: For `SPOTIFY_ENCRYPTION_KEY`, use:
+
+```bash
+openssl rand -hex 32
+```
+
 ## Step 3: Update Spotify App Redirect URIs (if needed)
 
-Ensure that `http://localhost:3000/api/auth/callback/spotify` is added to the "Redirect URIs" list in your Spotify app settings.
+Ensure that `http://127.0.0.1:3000/api/auth/callback/spotify` is added to the "Redirect URIs" list in your Spotify app settings.
 
 ## Step 4: Run the Application
 
-Start the development server:
+Start the development server using bun (the preferred and recommended tool for this project):
 
 ```bash
 bun run dev
@@ -45,7 +53,7 @@ bun run dev
 
 ## Step 5: Test the Authentication
 
-1. Navigate to `http://localhost:3000/auth/signin`
+1. Navigate to `http://127.0.0.1:3000/auth/signin`
 2. Click "Sign in with Spotify"
 3. Authorize the application in the Spotify popup
 4. You should be redirected back and logged in
@@ -58,7 +66,7 @@ bun run dev
 
 ## How It Works
 
-- **NextAuth Configuration**: The app uses NextAuth.js with the Spotify provider
+- **NextAuth Configuration**: The app uses NextAuth.js with the Spotify provider. For the provider setup and scopes configuration, see [`app/api/auth/[...nextauth]/route.ts`](../app/api/auth/[...nextauth]/route.ts).
 - **Scopes**: The app requests the following scopes:
   - `user-read-email`
   - `user-read-private`
@@ -68,8 +76,31 @@ bun run dev
   - `playlist-read-collaborative`
   - `playlist-modify-public`
   - `playlist-modify-private`
-- **Token Management**: Access tokens are automatically refreshed when they expire
+- **Token Management**: Access tokens are automatically refreshed when they expire via the refresh token in the NextAuth callbacks. For more details, see the [Auth.js callbacks documentation](https://authjs.dev/reference/nextjs#callbacks).
 - **API Routes**: Protected routes use `getServerSession` to access the user's Spotify tokens
+
+## OAuth Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Spotify
+    participant NextAuth
+
+    User->>App: Clicks "Sign in with Spotify"
+    App->>Spotify: Generates auth URL (client_id, redirect_uri, scopes, state)
+    Spotify->>User: Auth page
+    User->>Spotify: Authenticates and grants permissions
+    Spotify->>App: Redirects to callback with authorization code
+    App->>Spotify: Exchanges code for access_token + refresh_token (client_secret)
+    NextAuth->>App: Stores tokens in secure session (JWT/cookies)
+    User->>App: Accesses protected pages/APIs
+    App->>Spotify: Uses tokens to call Spotify API
+    alt Token expires
+        App->>Spotify: Use refresh_token to get new access_token
+    end
+```
 
 ## Troubleshooting
 
@@ -81,6 +112,8 @@ bun run dev
 
 For production deployment:
 
-- Update `NEXTAUTH_URL` to your production domain
-- Add the production callback URL to your Spotify app's redirect URIs
-- Ensure environment variables are set in your hosting platform
+- Update `NEXTAUTH_URL` to your production domain using HTTPS (e.g., `https://yourdomain.com`)
+- Update `SPOTIFY_REDIRECT_URI` to the production callback URL (e.g., `https://yourdomain.com/api/auth/callback/spotify`) and add it to your Spotify app's "Redirect URIs"
+- Protect environment variables securely in your hosting platform (e.g., set them as secrets in Vercel, Netlify, or similar; never commit `.env` to git)
+- Ensure sensitive data like `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_ENCRYPTION_KEY`, and `NEXTAUTH_SECRET` are not exposed in code, logs, or client-side
+- Update the Spotify Developer Dashboard with the production redirect URI and verify app settings

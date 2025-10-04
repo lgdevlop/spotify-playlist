@@ -1,24 +1,13 @@
 "use client";
 
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-interface Playlist {
-  id: string;
-  name: string;
-  description: string;
-  image: string | null;
-  tracks: number;
-  owner: string;
-  public: boolean;
-  external_urls: {
-    spotify: string;
-  };
-}
+import type { ApiResponse, Playlist } from "@/types";
 
-export function TopPlaylistsPage() {
+export default function TopPlaylistsPage() {
   const { data: session, status } = useSession();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +28,12 @@ export function TopPlaylistsPage() {
         throw new Error("Failed to fetch playlists");
       }
 
-      const data = await response.json();
-      setPlaylists(data.playlists);
+      const apiResponse: ApiResponse<Playlist[]> = await response.json();
+      if (apiResponse.success && apiResponse.data) {
+        setPlaylists(apiResponse.data);
+      } else {
+        throw new Error(apiResponse.error || "Failed to fetch playlists");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -192,13 +185,5 @@ export function TopPlaylistsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function TopPlaylistsPageWrapper() {
-  return (
-    <SessionProvider>
-      <TopPlaylistsPage />
-    </SessionProvider>
   );
 }

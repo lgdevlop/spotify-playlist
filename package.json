@@ -15,6 +15,7 @@
   "dependencies": {
     "next": "15.5.3",
     "next-auth": "^4.24.11",
+    "next-iron-session": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -25,7 +26,7 @@
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@types/bun": "^1.2.23",
-    "@types/node": "^20",
+    "@types/node": "^24.6.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

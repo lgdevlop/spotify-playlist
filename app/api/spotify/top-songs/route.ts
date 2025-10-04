@@ -1,10 +1,17 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Recuperar credenciais da sessão para passar para authOptions
+    const { getSpotifyConfig } = await import("@/app/lib/session-manager");
+    const credentials = await getSpotifyConfig();
+    
+    const session = await getServerSession(authOptions(credentials ? {
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret
+    } : undefined));
 
     if (!session?.accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
