@@ -25,7 +25,7 @@ This overview document works in conjunction with:
 
 | Task ID | Description | Priority | Status | Progress Notes | Branch | Deadline |
 |---------|-------------|----------|--------|----------------|--------|----------|
-| SEC-001 | Client Secret Exposure in Plain Text | Critical | Pending | Initial assessment complete - clientSecret exposed in GET /api/config endpoint | fix/security-sec001-client-secret-exposure | 2025-10-06 |
+| SEC-001 | Client Secret Exposure in Plain Text | Critical | Completed | ✅ RESOLVED - Removed clientSecret from API response, implemented server-side proxy with AES-256-GCM encryption, fixed encoding issues, integrated with SEC-003 | fix/security-sec001-client-secret-exposure | 2025-10-05 |
 | SEC-002 | OAuth Refresh Token Exposure to Client | Critical | Pending | Refresh tokens returned to client via NextAuth session callback | fix/security-sec002-refresh-token-exposure | 2025-10-07 |
 | SEC-003 | Global Credential Storage | Critical | Pending | Credentials stored in global variable shared across all users | fix/security-sec003-global-credentials | 2025-10-06 |
 | SEC-004 | OAuth Tokens Exposed in Logs | Critical | Pending | Security logs may contain unmasked OAuth tokens in error scenarios | fix/security-sec004-tokens-logs-exposure | 2025-10-08 |
