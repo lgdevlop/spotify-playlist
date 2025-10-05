@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSpotifyConfig } from "../hooks/useSpotifyConfig";
+import { logError } from "../lib/security-logger";
 
 export default function Config() {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [redirectUri, setRedirectUri] = useState("");
   const [isValidating, setIsValidating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
@@ -21,18 +21,18 @@ export default function Config() {
       try {
         const response = await fetch("/api/config");
         if (response.ok) {
-          const config = await response.json() as { clientId: string; clientSecret: string; redirectUri: string };
+          const config = await response.json() as { clientId: string; redirectUri: string; hasCredentials: boolean };
           setClientId(config.clientId || "");
-          setClientSecret(config.clientSecret || "");
+          setClientSecret(""); // Always empty on load - no secret exposure
           setRedirectUri(config.redirectUri || "");
         }
       } catch (error) {
-        console.error("Error loading config:", error);
+        logError("Error loading config", error as Error);
       } finally {
-        setIsLoading(false);
+        // isLoading not used
       }
     };
-
+  
     loadConfig();
   }, []);
 
@@ -41,52 +41,64 @@ export default function Config() {
       alert("Please fill in all fields.");
       return;
     }
-
+  
     setIsValidating(true);
     setValidationError(null);
-
+  
     try {
-      // First, validate the credentials
-      const validationResponse = await fetch("/api/spotify/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ clientId, clientSecret }),
+      // Encrypt credentials before sending
+      const { ClientCrypto } = await import("../lib/client-crypto");
+      const encryptedCredentials = await ClientCrypto.encryptCredentials({
+        clientId,
+        clientSecret,
+        redirectUri
       });
-
-      const validationResult = await validationResponse.json() as { valid: boolean; error?: string };
-
-      if (!validationResult.valid) {
-        setValidationError(validationResult.error || "Invalid Spotify credentials");
-        setIsValidating(false);
-        return;
-      }
-
-      // If validation passed, save to server
+  
+      // Send encrypted credentials
       const response = await fetch("/api/config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ clientId, clientSecret, redirectUri }),
+        body: JSON.stringify({
+          encryptedCredentials,
+          // Include hash for integrity verification
+          integrityHash: await crypto.subtle.digest('SHA-256', new TextEncoder().encode(encryptedCredentials))
+        }),
       });
-
+  
       if (!response.ok) {
         throw new Error("Failed to save credentials");
       }
-
+  
+      // Server-side validation (no credentials sent)
+      const validationResponse = await fetch("/api/spotify/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}), // Empty - uses stored credentials
+      });
+  
+      const validationResult = await validationResponse.json() as { valid: boolean; error?: string };
+  
+      if (!validationResult.valid) {
+        setValidationError(validationResult.error || "Invalid Spotify credentials");
+        setIsValidating(false);
+        return;
+      }
+  
       // Update the config status
       await updateStatus();
-
+  
       // Show success message and redirect
-      setSuccessMessage("Credentials saved and validated successfully! Redirecting to sign in...");
+      setSuccessMessage("Credentials saved and validated securely! Redirecting to sign in...");
       setTimeout(() => {
         router.push("/auth/signin");
       }, 2000);
     } catch (error) {
-      console.error("Error saving credentials:", error);
-      setValidationError("Failed to save credentials. Please try again.");
+      logError("Error saving credentials", error as Error);
+      setValidationError("Failed to save credentials securely. Please try again.");
     } finally {
       setIsValidating(false);
     }

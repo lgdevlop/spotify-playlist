@@ -160,3 +160,18 @@ export const logSecurityEvent = (
   details?: Record<string, unknown>,
   error?: Error | string
 ) => securityLogger.log(eventType, req, details, error);
+
+export const logError = (
+  message: string,
+  error?: Error | string,
+  req?: NextApiRequest | NextRequest,
+  details?: Record<string, unknown>
+): void => {
+  const sanitizedError = typeof error === 'string' ? error : error instanceof Error ? error.message : 'Unknown error';
+  logSecurityEvent(
+    SecurityEventType.INVALID_REQUEST,
+    req,
+    { message, ...(details || {}) },
+    sanitizedError
+  );
+};

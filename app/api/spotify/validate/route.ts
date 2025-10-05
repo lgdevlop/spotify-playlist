@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import type { SpotifyConfig, ValidationResult } from "@/types";
+import { NextResponse } from "next/server";
+import type { ValidationResult } from "@/types";
+import { logError } from "@/app/lib/security-logger";
 
 interface SpotifyTokenResponse {
   access_token: string;
@@ -7,28 +8,21 @@ interface SpotifyTokenResponse {
   expires_in: number;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const body: SpotifyConfig & { useEnvVars?: boolean } = await request.json();
-    const { clientId, clientSecret, useEnvVars } = body;
-
-    // If useEnvVars is true, validate using environment variables instead
-    let actualClientId = clientId;
-    let actualClientSecret = clientSecret;
-
-    if (useEnvVars) {
-      actualClientId = process.env.SPOTIFY_CLIENT_ID || '';
-      actualClientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
-    }
-
-    if (!actualClientId || !actualClientSecret) {
-      const result: ValidationResult = { valid: false, error: "Client ID and Client Secret are required" };
+    // Uses stored credentials from session
+    const { getSpotifyConfig } = await import('@/app/lib/session-manager');
+    const credentials = await getSpotifyConfig();
+    if (!credentials) {
+      const result: ValidationResult = {
+        valid: false,
+        error: "No credentials configured. Please configure Spotify credentials first."
+      };
       return NextResponse.json(result, { status: 400 });
     }
-
-    // Testar as credenciais fazendo uma chamada para o endpoint de token do Spotify
-    // Usamos o fluxo client_credentials para testar se as credenciais são válidas
-    const authString = Buffer.from(`${actualClientId}:${actualClientSecret}`).toString('base64');
+    
+    // Validates using server-side credentials
+    const authString = Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64');
 
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
@@ -49,12 +43,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Se chegou aqui, as credenciais são inválidas
     const result: ValidationResult = { valid: false, error: "Invalid Spotify credentials" };
     return NextResponse.json(result, { status: 401 });
 
   } catch (error) {
-    console.error("Error validating Spotify credentials:", error);
+    logError("Error validating Spotify credentials", error as Error);
     const result: ValidationResult = { valid: false, error: "Failed to validate credentials" };
     return NextResponse.json(result, { status: 500 });
   }

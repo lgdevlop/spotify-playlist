@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/app/lib/auth";
 import type { ApiResponse } from "@/types";
+import { logError } from "@/app/lib/security-logger";
 
 interface SpotifyPlaylist {
   id: string;
@@ -31,10 +30,11 @@ interface TransformedPlaylist {
 
 export async function GET() {
   try {
-    // Recuperar credenciais da sessão para passar para authOptions
+    const { getServerSession } = await import("next-auth/next");
+    const { authOptions } = await import("@/app/lib/auth");
     const { getSpotifyConfig } = await import("@/app/lib/session-manager");
-    const credentials = await getSpotifyConfig();
     
+    const credentials = await getSpotifyConfig();
     const session = await getServerSession(authOptions(credentials ? {
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret
@@ -45,22 +45,9 @@ export async function GET() {
       return NextResponse.json(result, { status: 401 });
     }
 
-    // Fetch user's playlists from Spotify
-    const response = await fetch(
-      "https://api.spotify.com/v1/me/playlists?limit=5",
-      {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Spotify API error: ${response.status}`);
-    }
-
-    const data: SpotifyPlaylistsResponse = await response.json();
+    // Use SpotifyProxy for server-side API call
+    const { SpotifyProxy } = await import("@/app/lib/spotify-proxy");
+    const data = await SpotifyProxy.getPlaylists(session.accessToken, 5) as SpotifyPlaylistsResponse;
 
     // Transform the data to include only necessary information
     const playlists: TransformedPlaylist[] = data.items.map((playlist: SpotifyPlaylist) => ({
@@ -77,7 +64,7 @@ export async function GET() {
     const result: ApiResponse<TransformedPlaylist[]> = { success: true, data: playlists };
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching playlists:", error);
+    logError("Error fetching playlists", error as Error);
     const result: ApiResponse<TransformedPlaylist[]> = { success: false, error: "Failed to fetch playlists" };
     return NextResponse.json(result, { status: 500 });
   }
