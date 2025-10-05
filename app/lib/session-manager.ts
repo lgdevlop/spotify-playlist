@@ -90,6 +90,10 @@ export async function clearSessionData(): Promise<void> {
  * Store Spotify config in session (encrypting sensitive data)
  */
 export async function storeSpotifyConfig(config: Omit<SpotifyConfig, 'clientSecret'> & { clientSecret: string }): Promise<void> {
+  // Integrate SEC-003 session validation
+  const { SessionValidator } = await import('./session-validator');
+  await SessionValidator.validateSession();
+
   const encryptedSecret = encrypt(config.clientSecret);
 
   const spotifyConfig: EncryptedSpotifyConfig = {
@@ -121,6 +125,10 @@ export async function getSpotifyConfig(): Promise<SpotifyConfig | null> {
     return null;
   }
 
+  // Integrate SEC-003 session validation
+  const { SessionValidator } = await import('./session-validator');
+  await SessionValidator.validateCredentialAccess();
+
   try {
     const decryptedSecret = decrypt(session.spotifyConfig.clientSecret);
 
@@ -139,5 +147,10 @@ export async function getSpotifyConfig(): Promise<SpotifyConfig | null> {
  * Check if session is valid
  */
 export async function isSessionValid(): Promise<boolean> {
-  return (await getSessionData()) !== null;
+  const session = await getSessionData();
+  if (!session) return false;
+
+  // Enhanced validation for SEC-003
+  const { SessionValidator } = await import('./session-validator');
+  return await SessionValidator.validateSession();
 }
