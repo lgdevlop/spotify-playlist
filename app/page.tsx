@@ -7,7 +7,11 @@ import { useSpotifyConfig } from "./hooks/useSpotifyConfig";
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const { shouldRedirectToConfig, redirectToConfig, isLoading: configLoading } = useSpotifyConfig();
+  const {
+    shouldRedirectToConfig,
+    redirectToConfig,
+    isLoading: configLoading,
+  } = useSpotifyConfig();
 
   // Redirecionar para configuração se necessário
   useEffect(() => {
@@ -66,7 +70,7 @@ export default function Home() {
             <div className="space-y-4 flex flex-col gap-4">
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-center"
+                className="cursor-pointer bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-center"
               >
                 Log out
               </button>
