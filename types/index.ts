@@ -12,6 +12,13 @@ export interface SpotifyConfig {
   clientSecret: string;
 }
 
+export interface ClientSpotifyConfig {
+  clientId: string;
+  redirectUri: string;
+  hasCredentials: boolean;
+  isConfigured: boolean;
+}
+
 // Generic API response wrapper
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -31,7 +38,7 @@ export interface ConfigStatus {
   isValid: boolean;
   isLoading: boolean;
   error: string | null;
-  config: SpotifyConfig | null;
+  config: ClientSpotifyConfig | null;
 }
 
 // Security log entry (re-exported for convenience)
