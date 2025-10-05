@@ -48,7 +48,7 @@ export default function TopSongsPage() {
     if (status === "authenticated") {
       fetchTopSongs();
     }
-  }, [status, fetchTopSongs]);
+  }, [status, fetchTopSongs, router]);
 
   const formatDuration = (ms: number) => {
     const minutes = Math.floor(ms / 60000);

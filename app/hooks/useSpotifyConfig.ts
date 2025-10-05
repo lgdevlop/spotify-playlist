@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { SpotifyConfig, ConfigStatus, ValidationResult } from "@/types";
+import type { ConfigStatus } from "@/types";
+import type { ClientSpotifyConfig } from "@/types";
+import { logError } from "@/app/lib/security-logger";
 
 export function useSpotifyConfig() {
   const router = useRouter();
@@ -15,31 +17,18 @@ export function useSpotifyConfig() {
   });
 
 
-  // Validar credenciais com a API do Spotify
-  const validateCredentials = useCallback(async (config: SpotifyConfig & { source?: string }): Promise<boolean> => {
+  // Validar credenciais com a API do Spotify (server-side only)
+  const validateCredentials = useCallback(async (): Promise<boolean> => {
     try {
-      const requestBody = {
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        useEnvVars: config.source === 'env' // Use env vars for validation when source is 'env'
-      };
-
       const response = await fetch("/api/spotify/validate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}) // Empty - uses stored credentials
       });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const result: ValidationResult = await response.json();
-      return result.valid === true;
+      
+      return (await response.json()).valid;
     } catch (error) {
-      console.error("Error validating credentials:", error);
+      logError("Error validating credentials", error as Error);
       return false;
     }
   }, []);
@@ -49,7 +38,6 @@ export function useSpotifyConfig() {
     setStatus((prev: ConfigStatus) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Get raw config response to preserve source information
       const response = await fetch("/api/config");
       if (!response.ok) {
         throw new Error("Failed to fetch config");
@@ -57,7 +45,7 @@ export function useSpotifyConfig() {
 
       const rawConfig = await response.json();
 
-      if (!rawConfig.clientId || !rawConfig.clientSecret || rawConfig.clientSecret === "") {
+      if (!rawConfig.clientId || !rawConfig.hasCredentials) {
         setStatus({
           isConfigured: false,
           isValid: false,
@@ -68,23 +56,19 @@ export function useSpotifyConfig() {
         return;
       }
 
-      // Create config object for validation
-      const configForValidation = {
-        clientId: rawConfig.clientId,
-        clientSecret: rawConfig.clientSecret,
-        source: rawConfig.source
-      };
+      // Validate using server-side credentials
+      const isValid = await validateCredentials();
 
-      const isValid = await validateCredentials(configForValidation);
-
-      // Create config object for status (without source)
-      const config: SpotifyConfig = {
-        clientId: rawConfig.clientId,
-        clientSecret: rawConfig.clientSecret
+      // Create config object without secret
+      const config: ClientSpotifyConfig = {
+        clientId: rawConfig.clientId || "",
+        redirectUri: rawConfig.redirectUri || "",
+        hasCredentials: rawConfig.hasCredentials,
+        isConfigured: rawConfig.isConfigured
       };
 
       setStatus({
-        isConfigured: true,
+        isConfigured: rawConfig.isConfigured,
         isValid,
         isLoading: false,
         error: isValid ? null : "Invalid Spotify credentials",
