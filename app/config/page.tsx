@@ -182,7 +182,7 @@ export default function Config() {
               value={redirectUri}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRedirectUri(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-              placeholder="http://localhost:3000/api/auth/callback/spotify"
+              placeholder="http://127.0.0.1:3000/auth/callback"
             />
           </div>
           <div>
