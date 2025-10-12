@@ -21,9 +21,14 @@ export async function GET(request: NextRequest) {
     const timeRange = searchParams.get("time_range") || "short_term";
     const limit = parseInt(searchParams.get("limit") || "5");
 
-    // Use SpotifyProxy for server-side API call
+    // Use SpotifyProxy for server-side API call with automatic token refresh
     const { SpotifyProxy } = await import("@/app/lib/spotify-proxy");
-    const data = await SpotifyProxy.getTopTracks(session.accessToken, timeRange, limit);
+    const data = await SpotifyProxy.getTopTracks(
+      session.accessToken,
+      timeRange,
+      limit,
+      session.spotifyId // Pass userId for automatic token refresh
+    );
 
     return NextResponse.json(data);
   } catch (error) {

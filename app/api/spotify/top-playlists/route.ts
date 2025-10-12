@@ -45,9 +45,13 @@ export async function GET() {
       return NextResponse.json(result, { status: 401 });
     }
 
-    // Use SpotifyProxy for server-side API call
+    // Use SpotifyProxy for server-side API call with automatic token refresh
     const { SpotifyProxy } = await import("@/app/lib/spotify-proxy");
-    const data = await SpotifyProxy.getPlaylists(session.accessToken, 5) as SpotifyPlaylistsResponse;
+    const data = await SpotifyProxy.getPlaylists(
+      session.accessToken,
+      5,
+      session.spotifyId // Pass userId for automatic token refresh
+    ) as SpotifyPlaylistsResponse;
 
     // Transform the data to include only necessary information
     const playlists: TransformedPlaylist[] = data.items.map((playlist: SpotifyPlaylist) => ({
