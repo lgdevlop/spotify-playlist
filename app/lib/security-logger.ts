@@ -15,6 +15,21 @@ export enum SecurityEventType {
   INVALID_REQUEST = 'INVALID_REQUEST',
   SESSION_TIMEOUT = 'SESSION_TIMEOUT',
   SESSION_INACTIVITY = 'SESSION_INACTIVITY',
+  JWT_CALLBACK_TRIGGERED = 'JWT_CALLBACK_TRIGGERED',
+  JWT_CALLBACK_INITIAL_SETUP = 'JWT_CALLBACK_INITIAL_SETUP',
+  JWT_CALLBACK_TOKEN_REFRESH = 'JWT_CALLBACK_TOKEN_REFRESH',
+  JWT_CALLBACK_COMPLETED = 'JWT_CALLBACK_COMPLETED',
+  AUTH_DEBUG = 'AUTH_DEBUG',
+  // Credential tracking events
+  CREDENTIALS_FROM_SESSION_TOKEN_CALLED = 'CREDENTIALS_FROM_SESSION_TOKEN_CALLED',
+  CREDENTIALS_FROM_SESSION_TOKEN_SUCCESS = 'CREDENTIALS_FROM_SESSION_TOKEN_SUCCESS',
+  CREDENTIALS_FROM_SESSION_TOKEN_FAILURE = 'CREDENTIALS_FROM_SESSION_TOKEN_FAILURE',
+  CREDENTIALS_JWT_REFRESH_ATTEMPT = 'CREDENTIALS_JWT_REFRESH_ATTEMPT',
+  CREDENTIALS_JWT_REFRESH_SUCCESS = 'CREDENTIALS_JWT_REFRESH_SUCCESS',
+  CREDENTIALS_JWT_REFRESH_FAILURE = 'CREDENTIALS_JWT_REFRESH_FAILURE',
+  CREDENTIALS_FALLBACK_ATTEMPT = 'CREDENTIALS_FALLBACK_ATTEMPT',
+  CREDENTIALS_FALLBACK_SUCCESS = 'CREDENTIALS_FALLBACK_SUCCESS',
+  CREDENTIALS_FALLBACK_FAILURE = 'CREDENTIALS_FALLBACK_FAILURE',
 }
 
 /**
@@ -60,14 +75,22 @@ function sanitizeLogData(data: unknown): unknown {
  * Extracts client information from request
  */
 function extractClientInfo(req: NextApiRequest | NextRequest): { userAgent?: string; ip?: string } {
+  // ✅ SECURITY FIX: Handle cases where req.headers is undefined
+  if (!req || !req.headers) {
+    return { userAgent: undefined, ip: undefined };
+  }
+
   const headers = req.headers as unknown as Record<string, string | string[]> & { get?: (key: string) => string | null };
 
   const getHeaderValue = (key: string): string | undefined => {
-    if (headers.get) {
+    if (headers && headers.get) {
       return headers.get(key) || undefined;
     }
-    const value = headers[key];
-    return Array.isArray(value) ? value[0] : value;
+    if (headers) {
+      const value = headers[key];
+      return Array.isArray(value) ? value[0] : value;
+    }
+    return undefined;
   };
 
   return {
@@ -173,5 +196,65 @@ export const logError = (
     req,
     { message, ...(details || {}) },
     sanitizedError
+  );
+};
+
+/**
+ * Logs authentication debug information
+ */
+export const logAuthDebug = (
+  message: string,
+  eventType: SecurityEventType = SecurityEventType.AUTH_DEBUG,
+  details?: Record<string, unknown>,
+  req?: NextApiRequest | NextRequest
+): void => {
+  logSecurityEvent(
+    eventType,
+    req,
+    { message, ...(details || {}) }
+  );
+};
+
+/**
+ * Logs JWT callback events with appropriate security context
+ */
+export const logJwtCallback = (
+  stage: 'triggered' | 'initial_setup' | 'token_refresh' | 'completed',
+  message: string,
+  details?: Record<string, unknown>
+): void => {
+  const eventTypes = {
+    triggered: SecurityEventType.JWT_CALLBACK_TRIGGERED,
+    initial_setup: SecurityEventType.JWT_CALLBACK_INITIAL_SETUP,
+    token_refresh: SecurityEventType.JWT_CALLBACK_TOKEN_REFRESH,
+    completed: SecurityEventType.JWT_CALLBACK_COMPLETED,
+  };
+
+  logSecurityEvent(
+    eventTypes[stage],
+    undefined,
+    { message, ...(details || {}) }
+  );
+};
+
+/**
+ * Logs credential-related events with structured data
+ */
+export const logCredentialsEvent = (
+  eventType: SecurityEventType,
+  message: string,
+  details?: Record<string, unknown>,
+  req?: NextApiRequest | NextRequest,
+  error?: Error | string
+): void => {
+  logSecurityEvent(
+    eventType,
+    req,
+    {
+      message,
+      tracking_source: 'credentials_tracking',
+      ...(details || {})
+    },
+    error
   );
 };

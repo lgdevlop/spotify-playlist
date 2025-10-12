@@ -46,3 +46,7 @@ temp
 
 # Editors
 .vscode
+
+# Internal docs
+project-docs/tasks
+project-docs/reports

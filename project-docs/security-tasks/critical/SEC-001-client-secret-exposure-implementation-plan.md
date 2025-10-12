@@ -568,50 +568,50 @@ export class TokenManager {
 
 ### Phase 2: Main Security Fix
 
-3. **Update configuration endpoint**
+1. **Update configuration endpoint**
    - **KEEP** POST to receive user credentials
    - **IMPLEMENT** encryption support in POST
    - **REMOVE** clientSecret from GET response
    - Add comprehensive tests
 
-4. **Update configuration page**
+2. **Update configuration page**
    - Implement encryption before submission
    - Add integrity verification
    - Keep UX intact
 
 ### Phase 3: Authentication Migration
 
-5. **Update authentication flow**
+1. **Update authentication flow**
    - Remove global credentials (SEC-003)
    - Update auth.ts to use session-based credentials
    - Test complete authentication flow
 
-6. **Migrate existing endpoints**
+2. **Migrate existing endpoints**
    - Update `/api/spotify/validate` to be server-side only
    - Update `/api/spotify/top-songs` to use proxy
    - Update `/api/spotify/top-playlists` to use proxy
 
 ### Phase 4: Client-Side Updates
 
-7. **Refactor client components**
+1. **Refactor client components**
    - Update `useSpotifyConfig` hook
    - **KEEP** `/config` page functional
    - Update components that use clientSecret
 
-8. **Update authentication pages**
+2. **Update authentication pages**
    - Modify signin flow to use server-side exchange
    - Update error handling
    - Test complete authentication flow
 
 ### Phase 5: Tests & Validation
 
-9. **Implement comprehensive tests**
+1. **Implement comprehensive tests**
    - Unit tests for new utilities
    - Integration tests for proxy endpoints
    - Security tests for credential exposure
    - MITM protection tests
 
-10. **Security validation**
+2. **Security validation**
     - Run OWASP ZAP scans
     - Manual penetration tests
     - Verify no clientSecret exposure

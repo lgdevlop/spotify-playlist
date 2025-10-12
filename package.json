@@ -6,8 +6,8 @@
     "bun": ">=1.0.0"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev --turbopack -H 0.0.0.0",
+    "build": "NODE_ENV=production next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "test": "bun test"

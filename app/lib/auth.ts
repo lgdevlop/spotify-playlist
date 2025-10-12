@@ -2,16 +2,18 @@ import SpotifyProvider from "next-auth/providers/spotify";
 import type { SessionStrategy, Account, Profile, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import type { AuthConfig } from "../../types";
+import { getSpotifyConfig } from "./session-manager";
+import { logError } from './security-logger';
 
-// Store current credentials for token refresh
-let currentCredentials: { clientId?: string; clientSecret?: string } = {};
+// ✅ SECURITY FIX (SEC-003): Removed global currentCredentials variable
+// No more global state - using per-request credential retrieval
 
 export const authOptions = (credentials?: AuthConfig) => {
   const clientId = credentials?.clientId || process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = credentials?.clientSecret || process.env.SPOTIFY_CLIENT_SECRET;
 
-  // Store credentials for token refresh
-  currentCredentials = { clientId, clientSecret };
+  // ✅ SECURITY FIX (SEC-003): Removed global credential storage
+  // Credentials are now retrieved per-request when needed
 
   const providers = [];
   if (clientId && clientSecret) {
@@ -29,7 +31,7 @@ export const authOptions = (credentials?: AuthConfig) => {
         })
       );
     } catch (error) {
-      console.error("Error creating Spotify provider:", error);
+      logError("Error creating Spotify provider", error as Error);
     }
   }
 
@@ -41,6 +43,7 @@ export const authOptions = (credentials?: AuthConfig) => {
     },
     callbacks: {
       async jwt({ token, account, profile }: { token: JWT, account?: Account | null, profile?: Profile | null }) {
+        // Initial token setup from OAuth callback
         if (account && profile) {
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
@@ -48,10 +51,19 @@ export const authOptions = (credentials?: AuthConfig) => {
           token.spotifyId = (profile as { id: string }).id;
         }
 
+        // ✅ SECURITY FIX (SEC-003): Per-request credential retrieval for token refresh
         // Refresh the token if it's expired
         if (token.expiresAt && Date.now() / 1000 > token.expiresAt) {
           try {
-            // Use stored credentials for token refresh
+            // ✅ Get fresh credentials per request instead of using global variable
+            const refreshConfig = await getSpotifyConfig();
+            
+            if (!refreshConfig?.clientId || !refreshConfig?.clientSecret) {
+              logError("No credentials available for token refresh", "Missing client credentials");
+              return token; // Return existing token instead of crashing
+            }
+
+            // ✅ SECURITY FIX (SEC-001): Preserved client secret encryption via getSpotifyConfig()
             const response = await fetch("https://accounts.spotify.com/api/token", {
               method: "POST",
               headers: {
@@ -60,8 +72,8 @@ export const authOptions = (credentials?: AuthConfig) => {
               body: new URLSearchParams({
                 grant_type: "refresh_token",
                 refresh_token: token.refreshToken as string,
-                client_id: currentCredentials.clientId!,
-                client_secret: currentCredentials.clientSecret!,
+                client_id: refreshConfig.clientId,
+                client_secret: refreshConfig.clientSecret,
               }),
             });
 
@@ -81,18 +93,20 @@ export const authOptions = (credentials?: AuthConfig) => {
                 token.refreshToken = data.refresh_token;
               }
             } else {
-              console.error("Failed to refresh token:", data);
+              logError("Failed to refresh token", `Response: ${JSON.stringify(data)}`);
             }
           } catch (error) {
-            console.error("Error refreshing token:", error);
+            logError("Error refreshing token", error as Error);
           }
         }
 
         return token;
       },
+      // ✅ SECURITY FIX (SEC-002): Removed refreshToken from session callback
+      // Refresh tokens are kept server-side only in JWT tokens, never exposed to client
       async session({ session, token }: { session: Session, token: JWT }) {
         session.accessToken = token.accessToken;
-        session.refreshToken = token.refreshToken;
+        // ❌ REMOVED: session.refreshToken = token.refreshToken; (SEC-002 fix)
         session.spotifyId = token.spotifyId;
         return session;
       },
