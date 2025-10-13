@@ -632,57 +632,57 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       });
     });
 
-    // test('should handle SpotifyProxy automatic token refresh securely', async () => {
-    //   const userId = 'test_user_123';
-    //   const accessToken = 'expired_access_token';
-    //   const refreshToken = 'secure_refresh_token';
+    test('should handle SpotifyProxy automatic token refresh securely', async () => {
+      const userId = 'test_user_123';
+      const accessToken = 'expired_access_token';
+      const refreshToken = 'secure_refresh_token';
 
-    //   // Store token
-    //   await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      // Store token
+      await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
       
-    //   // Add explicit wait for async operations to complete
-    //   await new Promise(resolve => setTimeout(resolve, 0));
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-    //   // Mock 401 response first, then successful response
-    //   let callCount = 0;
-    //   mockFetchImpl = async (input: RequestInfo | URL): Promise<Response> => {
-    //     const url = typeof input === 'string' ? input : input.toString();
-    //     callCount++;
-    //     if (url.includes('api.spotify.com') && callCount === 1) {
-    //       return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401 });
-    //     }
-    //     if (url.includes('accounts.spotify.com')) {
-    //       return new Response(JSON.stringify({
-    //         access_token: 'new_access_token',
-    //         token_type: 'Bearer',
-    //         expires_in: 3600
-    //       }), { status: 200 });
-    //     }
-    //     return new Response(JSON.stringify({ items: [] }), { status: 200 });
-    //   };
-    //   global.fetch = mockFetchImpl as typeof global.fetch;
+      // Mock 401 response first, then successful response
+      let callCount = 0;
+      mockFetchImpl = async (input: RequestInfo | URL): Promise<Response> => {
+        const url = typeof input === 'string' ? input : input.toString();
+        callCount++;
+        if (url.includes('api.spotify.com') && callCount === 1) {
+          return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401 });
+        }
+        if (url.includes('accounts.spotify.com')) {
+          return new Response(JSON.stringify({
+            access_token: 'new_access_token',
+            token_type: 'Bearer',
+            expires_in: 3600
+          }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      };
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
-    //   // Make API call that should trigger automatic refresh using the real SpotifyProxy
-    //   const result = await SpotifyProxy.makeAuthenticatedRequest(
-    //     '/me/top/tracks',
-    //     accessToken,
-    //     userId
-    //   );
+      // Make API call that should trigger automatic refresh using the real SpotifyProxy
+      const result = await SpotifyProxy.makeAuthenticatedRequest(
+        '/me/top/tracks',
+        accessToken,
+        userId
+      );
       
-    //   // Add explicit wait for async operations to complete
-    //   await new Promise(resolve => setTimeout(resolve, 0));
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-    //   // Should succeed after automatic refresh
-    //   expect(result).toBeDefined();
+      // Should succeed after automatic refresh
+      expect(result).toBeDefined();
 
-    //   // Verify automatic refresh is logged
-    //   const logs = securityLogger.getRecentLogs();
-    //   const autoRefreshLogs = logs.filter(log =>
-    //     log.details?.source === 'spotify_proxy' &&
-    //     log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
-    //   );
-    //   expect(autoRefreshLogs.length).toBeGreaterThan(0);
-    // });
+      // Verify automatic refresh is logged
+      const logs = securityLogger.getRecentLogs();
+      const autoRefreshLogs = logs.filter(log =>
+        log.details?.source === 'spotify_proxy' &&
+        log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
+      );
+      expect(autoRefreshLogs.length).toBeGreaterThan(0);
+    });
 
     test('should maintain security across all endpoints', async () => {
       // Test all major endpoints to ensure no refresh token exposure
