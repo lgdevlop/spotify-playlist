@@ -1,5 +1,5 @@
 // Mocks must be defined before imports that use them
-import { test, expect, mock, describe, afterAll, vi } from 'bun:test';
+import { test, expect, mock, describe, afterAll, vi, afterEach } from 'bun:test';
 import { NextRequest } from 'next/server';
 
 interface SpotifyConfig {
@@ -9,6 +9,10 @@ interface SpotifyConfig {
 }
 
 afterAll(() => {
+  vi.restoreAllMocks()
+});
+
+afterEach(() => {
   vi.restoreAllMocks()
 });
 
@@ -335,11 +339,11 @@ describe('SEC-001: Client Secret Exposure', () => {
     // Mock SpotifyProxy
     mock.module('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
-        // makeAuthenticatedRequest: async () => ({ items: [] }),
+        makeAuthenticatedRequest: async () => ({ items: [] }),
         getTopTracks: async () => ({
           items: [{ name: 'Mock Song', id: 'mock_id' }],
         }),
-        // getPlaylists: async () => ({ items: [] }),
+        getPlaylists: async () => ({ items: [] }),
       },
     }));
 
