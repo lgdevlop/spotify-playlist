@@ -1,4 +1,4 @@
-import { afterEach, mock } from 'bun:test';
+import { afterEach, afterAll, mock, vi } from 'bun:test';
 
 // Store original console methods to restore them later
 const originalConsole = {
@@ -28,6 +28,11 @@ function restoreConsole(): void {
 (globalThis as Record<string, unknown>).restoreConsole = restoreConsole;
 
 afterEach(() => {
-  mock.restore();
-  // restoreConsole();
+  mock.restore()
+  // restoreConsole()
+  vi.restoreAllMocks()
+});
+
+afterAll(() => {
+  vi.restoreAllMocks()
 });
