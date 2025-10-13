@@ -703,6 +703,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
         mock.module('@/app/lib/spotify-proxy', () => ({
           SpotifyProxy: {
+            makeAuthenticatedRequest: async (endpoint: string, accessToken: string, userId?: string) => ({ items: [] }),
             getTopTracks: async () => ({ items: [] }),
             getPlaylists: async () => ({ items: [] })
           }
