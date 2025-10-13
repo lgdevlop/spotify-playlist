@@ -8,65 +8,8 @@ import { tokenRefreshManager } from '../../app/lib/token-refresh-manager';
 import { SpotifyProxy } from '@/app/lib/spotify-proxy';
 import { mockModule } from '../mock-modules';
 
-interface SpotifyConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-}
-
-// Mock next/headers to avoid "cookies called outside request scope" error
-using nextHeaders = await mockModule('next/headers', () => ({
-  cookies: () => ({
-    get: () => null,
-    set: () => {},
-    delete: () => {},
-  }),
-  headers: () => ({
-    get: () => null,
-    getAll: () => [],
-    has: () => false,
-    entries: function* () {},
-    keys: function* () {},
-    values: function* () {},
-    append: () => {},
-    delete: () => {},
-    set: () => {},
-  }),
-}));
-
-// Mock session-manager functions
-using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
-  getSpotifyConfig: async (): Promise<SpotifyConfig | null> => ({
-    clientId: 'test_client_id',
-    clientSecret: 'test_client_secret',
-    redirectUri: 'http://localhost:3000/callback'
-  }),
-}));
-
 // Mock crypto functions
 const encryptedDataStore = new Map<string, string>();
-
-using libCrypto = await mockModule('@/app/lib/crypto', () => ({
-  encrypt: (data: string) => {
-    const id = Math.random().toString(36).substring(7);
-    encryptedDataStore.set(id, data);
-    return {
-      encrypted: `encrypted_${id}`,
-      iv: 'test_iv',
-      tag: 'test_tag'
-    };
-  },
-  decrypt: (encryptedData: { encrypted: string }) => {
-    const id = encryptedData.encrypted.replace('encrypted_', '');
-    return encryptedDataStore.get(id) || 'decrypted_data';
-  }
-}));
-
-// afterAll(() => {
-//   mock.module("@/app/lib/spotify-proxy", () => ({
-//     SpotifyProxy
-//   }))
-// });
 
 // Mock environment variables
 process.env.SPOTIFY_ENCRYPTION_KEY = 'a'.repeat(64); // 32 bytes in hex
