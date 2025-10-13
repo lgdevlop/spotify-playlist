@@ -5,6 +5,7 @@ import { securityLogger, SecurityEventType, logCredentialsEvent } from '../../ap
 import { tokenStorage } from '../../app/lib/token-storage';
 import { tokenRefreshManager } from '../../app/lib/token-refresh-manager';
 import { SpotifyProxy } from '../../app/lib/spotify-proxy';
+import { mockModule } from '../mock-modules';
 
 interface SpotifyConfig {
   clientId: string;
@@ -13,7 +14,7 @@ interface SpotifyConfig {
 }
 
 // Mock next/headers to avoid "cookies called outside request scope" error
-mock.module('next/headers', () => ({
+mockModule('next/headers', () => ({
   cookies: () => ({
     get: () => null,
     set: () => {},
@@ -33,7 +34,7 @@ mock.module('next/headers', () => ({
 }));
 
 // Mock session-manager functions
-mock.module('@/app/lib/session-manager', () => ({
+mockModule('@/app/lib/session-manager', () => ({
   getSpotifyConfig: async (): Promise<SpotifyConfig | null> => ({
     clientId: 'test_client_id',
     clientSecret: 'test_client_secret',
@@ -44,7 +45,7 @@ mock.module('@/app/lib/session-manager', () => ({
 // Mock crypto functions
 const encryptedDataStore = new Map<string, string>();
 
-mock.module('@/app/lib/crypto', () => ({
+mockModule('@/app/lib/crypto', () => ({
   encrypt: (data: string) => {
     const id = Math.random().toString(36).substring(7);
     encryptedDataStore.set(id, data);
@@ -695,7 +696,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       for (const endpoint of endpoints) {
         // Mock successful responses
-        mock.module('next-auth/next', () => ({
+        mockModule('next-auth/next', () => ({
           getServerSession: async () => ({
             accessToken: 'test_access_token',
             spotifyId: 'test_user_123'
