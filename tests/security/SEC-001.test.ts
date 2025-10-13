@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Mocks must be defined before imports that use them
-import { test, expect, mock, describe, afterAll, vi, afterEach } from 'bun:test';
+import { test, expect, mock, describe, spyOn } from 'bun:test';
 import { NextRequest } from 'next/server';
-
-import { SpotifyProxy } from '@/app/lib/spotify-proxy';
+import { mockModule } from '../mock-modules';
 
 interface SpotifyConfig {
   clientId: string;
@@ -10,50 +10,40 @@ interface SpotifyConfig {
   redirectUri: string;
 }
 
-afterAll(() => {
-  mock.module("@/app/lib/spotify-proxy", () => ({
-    SpotifyProxy
-  }))
-});
-
-// afterEach(() => {
-//   vi.restoreAllMocks()
-// });
-
 // Mock next/headers to avoid "cookies called outside request scope" error and for getServerSession
-mockModule('next/headers', () => ({
-  cookies: () => ({
-    get: () => null,
-    set: () => {},
-    delete: () => {},
-  }),
-  headers: () => ({
-    get: () => null,
-    getAll: () => [],
-    has: () => false,
-    entries: function* () {},
-    keys: function* () {},
-    values: function* () {},
-    append: () => {},
-    delete: () => {},
-    set: () => {},
-  }),
-}));
+// using nextHeaders = await mockModule('next/headers', () => ({
+//   cookies: () => ({
+//     get: () => null,
+//     set: () => {},
+//     delete: () => {},
+//   }),
+//   headers: () => ({
+//     get: () => null,
+//     getAll: () => [],
+//     has: () => false,
+//     entries: function* () {},
+//     keys: function* () {},
+//     values: function* () {},
+//     append: () => {},
+//     delete: () => {},
+//     set: () => {},
+//   }),
+// }));
 
-// Mock next-auth getServerSession to return mock session for top endpoints
-mockModule('next-auth/next', () => ({
-  getServerSession: async () => ({
-    accessToken: 'mock_access_token',
-  }),
-}));
+// // Mock next-auth getServerSession to return mock session for top endpoints
+// using nextAuthNext = await mockModule('next-auth/next', () => ({
+//   getServerSession: async () => ({
+//     accessToken: 'mock_access_token',
+//   }),
+// }));
 
-// Mock authOptions
-mockModule('@/app/lib/auth', () => ({
-  authOptions: () => ({}),
-}));
+// // Mock authOptions
+// using libAuth = await mockModule('@/app/lib/auth', () => ({
+//   authOptions: () => ({}),
+// }));
 
-// Mock session-manager functions (actual import path)
-mockModule('@/app/lib/session-manager', () => ({
+// // Mock session-manager functions (actual import path)
+using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
   storeSpotifyConfig: async (): Promise<void> => {
     // Mock successful storage
     return;
@@ -62,21 +52,45 @@ mockModule('@/app/lib/session-manager', () => ({
   isSessionValid: async (): Promise<boolean> => false,
 }));
 
-// Mock decryptAesKey to return valid 32-byte AES key
-mockModule('@/app/api/crypto/public-key/route', () => ({
-  decryptAesKey: async (): Promise<Buffer> => {
-    const bytes = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
-    return Buffer.from(bytes);
-  },
-}));
+// // Mock session-validator
+// using sessionValidator = await mockModule('@/app/lib/session-validator', () => ({
+//   SessionValidator: {
+//     validateSession: async (): Promise<boolean> => true,
+//     validateCredentialAccess: async (): Promise<boolean> => true,
+//   },
+// }));
+
+// // Mock crypto functions
+// using crypto = await mockModule('@/app/lib/crypto', () => ({
+//   encrypt: () => ({
+//     encrypted: 'mock_encrypted',
+//     iv: 'mock_iv',
+//     tag: 'mock_tag',
+//   }),
+//   decrypt: () => 'mock_decrypted_secret',
+// }));
+
+// // Mock decryptAesKey to return valid 32-byte AES key
+// using publickKeyRoute = await mockModule('@/app/api/crypto/public-key/route', () => ({
+//   decryptAesKey: async (): Promise<Buffer> => {
+//     const bytes = new Uint8Array(32);
+//     for (let i = 0; i < 32; i++) {
+//       bytes[i] = Math.floor(Math.random() * 256);
+//     }
+//     return Buffer.from(bytes);
+//   },
+// }));
+
+// // Mock security-logger
+// using securityLogger = await mockModule('@/app/lib/security-logger', () => ({
+//   logSecurityEvent: () => {},
+//   logError: () => {},
+//   logCredentialsEvent: () => {},
+// }));
 
 // Now import the routes after mocks
 import { GET, POST as configPost } from '../../app/api/config/route';
 import { POST as validatePost } from '../../app/api/spotify/validate/route';
-import { mockModule } from '../mock-modules';
 
 describe('SEC-001: Client Secret Exposure', () => {
   test('should not expose client secret in /api/config GET', async () => {
@@ -108,6 +122,15 @@ describe('SEC-001: Client Secret Exposure', () => {
   });
 
   test('should not expose clientSecret in /api/config POST response with plain credentials (fallback)', async () => {
+    // Mock storeSpotifyConfig to avoid actual storage
+    // const storeSpotifyConfigSpy = spyOn(await import('@/app/lib/session-manager'), 'storeSpotifyConfig').mockResolvedValue();
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
+      storeSpotifyConfig: async (): Promise<void> => {
+        // Mock successful storage
+        return;
+      },
+    }));
+    
     const plainBody = {
       clientId: 'test',
       clientSecret: 'secret',
@@ -125,6 +148,8 @@ describe('SEC-001: Client Secret Exposure', () => {
     expect(data.success).toBe(true);
     expect(data).not.toHaveProperty('clientSecret');
     expect(data.encrypted).toBe(false);
+    
+    // storeSpotifyConfigSpy.mockRestore();
   });
 
   test('should handle encrypted credentials processing error without exposing secrets', async () => {
@@ -167,6 +192,19 @@ describe('SEC-001: Client Secret Exposure', () => {
   });
 
   test('should maintain user credential input functionality', async () => {
+    // Mock storeSpotifyConfig to avoid actual storage
+    // const storeSpotifyConfigSpy = spyOn(await import('@/app/lib/session-manager'), 'storeSpotifyConfig').mockResolvedValue();
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
+      storeSpotifyConfig: async (): Promise<void> => {
+        // Mock successful storage
+        return;
+      },
+      getSpotifyConfig: async (): Promise<null> => {
+        // Mock successful storage
+        return null;
+      },
+    }));
+    
     // Test that /api/config POST succeeds without exposing or crashing
     const plainBody = {
       clientId: 'test',
@@ -183,14 +221,28 @@ describe('SEC-001: Client Secret Exposure', () => {
     expect(response.status).not.toBe(500);
 
     // Test /api/spotify/validate responds properly (400 if no creds, but endpoint functional)
+    // Mock getSpotifyConfig to return null (no credentials configured)
+    // const getSpotifyConfigSpy = spyOn(await import('@/app/lib/session-manager'), 'getSpotifyConfig').mockResolvedValue(null);
+    
+    // Mock fetch to avoid actual network call
+    const originalFetch = global.fetch;
+    const mockFetch = async () => new Response(JSON.stringify({ access_token: 'test_token' }), { status: 200 });
+    mockFetch.preconnect = () => {};
+    global.fetch = mockFetch;
+    
     const validateResponse = await validatePost();
     expect(validateResponse.status).toBe(400);
     expect(validateResponse.status).not.toBe(500);
+    
+    // Restore fetch and mocks
+    global.fetch = originalFetch;
+    // storeSpotifyConfigSpy.mockRestore();
+    // getSpotifyConfigSpy.mockRestore();
   });
 
   test('should handle decryption failure gracefully without exposing secrets', async () => {
     // Mock decryptAesKey to throw error (after structure validation)
-    mockModule('@/app/api/crypto/public-key/route', () => ({
+    using publickKeyRoute = await mockModule('@/app/api/crypto/public-key/route', () => ({
       decryptAesKey: async (): Promise<Buffer> => { throw new Error('Decryption failed'); },
     }));
 
@@ -223,7 +275,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { POST: exchangePost } = await import('../../app/api/spotify/auth/exchange/route');
 
     // Mock getSpotifyConfig to return credentials
-    mockModule('@/app/lib/session-manager', () => ({
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -265,7 +317,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { POST: refreshPost } = await import('../../app/api/spotify/auth/refresh/route');
 
     // Mock getSpotifyConfig to return credentials
-    mockModule('@/app/lib/session-manager', () => ({
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -304,16 +356,39 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { GET: topPlaylistsGet } = await import('../../app/api/spotify/top-playlists/route');
 
     // Mock getSpotifyConfig to return credentials for authOptions
-    mockModule('@/app/lib/session-manager', () => ({
-      getSpotifyConfig: async () => ({
-        clientId: 'test',
-        clientSecret: 'secret',
-        redirectUri: 'http://localhost/callback',
-      }),
+    // const getSpotifyConfigSpy = spyOn(await import('@/app/lib/session-manager'), 'getSpotifyConfig').mockResolvedValue({
+    //   clientId: 'test',
+    //   clientSecret: 'secret',
+    //   redirectUri: 'http://localhost/callback',
+    // });
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
+      getSpotifyConfig: async (): Promise<{ clientId: string; clientSecret: string; redirectUri: string; }> => {
+        // Mock successful storage
+        return {
+          clientId: 'test',
+          clientSecret: 'secret',
+          redirectUri: 'http://localhost/callback',
+        }
+      },
     }));
 
-    // Mock SpotifyProxy
-    mockModule('@/app/lib/spotify-proxy', () => ({
+    // Mock getServerSession to return a session with accessToken
+    // const getServerSessionSpy = spyOn(await import('next-auth/next'), 'getServerSession').mockResolvedValue({
+    //   accessToken: 'mock_access_token',
+    //   spotifyId: 'mock_user_id',
+    // });
+    using nextAuthNext = await mockModule('next-auth/next', () => ({
+      getServerSession: async (): Promise<{ accessToken: string; spotifyId: string; }> => {
+        // Mock successful storage
+        return {
+          accessToken: 'mock_access_token',
+          spotifyId: 'mock_user_id',
+        }
+      },
+    }));
+
+    // Mock SpotifyProxy using mockModule instead of spyOn
+    using spotifyProxy = await mockModule('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
         getPlaylists: async () => ({
           items: [{ name: 'Mock Playlist', id: 'mock_id' }],
@@ -327,13 +402,21 @@ describe('SEC-001: Client Secret Exposure', () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(data.data)).toBe(true);
     expect(data).not.toHaveProperty('clientSecret');
+    
+    // getSpotifyConfigSpy.mockRestore();
+    // getServerSessionSpy.mockRestore();
   });
 
   test('should not expose clientSecret in Spotify top songs endpoint', async () => {
     const { GET: topSongsGet } = await import('../../app/api/spotify/top-songs/route');
 
     // Mock getSpotifyConfig to return credentials for authOptions
-    mockModule('@/app/lib/session-manager', () => ({
+    // const getSpotifyConfigSpy = spyOn(await import('@/app/lib/session-manager'), 'getSpotifyConfig').mockResolvedValue({
+    //   clientId: 'test',
+    //   clientSecret: 'secret',
+    //   redirectUri: 'http://localhost/callback',
+    // });
+    using sessionManager = await mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -341,13 +424,25 @@ describe('SEC-001: Client Secret Exposure', () => {
       }),
     }));
 
-    // Mock SpotifyProxy
-    mockModule('@/app/lib/spotify-proxy', () => ({
+    // Mock getServerSession to return a session with accessToken
+    // const getServerSessionSpy = spyOn(await import('next-auth/next'), 'getServerSession').mockResolvedValue({
+    //   accessToken: 'mock_access_token',
+    //   spotifyId: 'mock_user_id',
+    // });
+    using getServerSession = await mockModule('next-auth/next', () => ({
+      getServerSession: async () => ({
+        accessToken: 'mock_access_token',
+        spotifyId: 'mock_user_id',
+      }),
+    }));
+
+    // Mock SpotifyProxy using mockModule instead of spyOn
+    using spotifyProxy = await mockModule('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
-        makeAuthenticatedRequest: async () => ({ items: [] }),
         getTopTracks: async () => ({
           items: [{ name: 'Mock Song', id: 'mock_id' }],
         }),
+        makeAuthenticatedRequest: async () => ({ items: [] }),
         getPlaylists: async () => ({ items: [] }),
       },
     }));
@@ -360,7 +455,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     expect(Array.isArray(data.items)).toBe(true);
     expect(data).not.toHaveProperty('clientSecret');
 
-    mock.clearAllMocks()
-    mock.restore()
+    // getSpotifyConfigSpy.mockRestore();
+    // getServerSessionSpy.mockRestore();
   });
 });
