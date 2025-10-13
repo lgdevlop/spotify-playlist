@@ -1,5 +1,5 @@
 // Mocks must be defined before imports that use them
-import { test, expect, mock, describe, beforeEach, afterEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach, spyOn } from 'bun:test';
 import { NextRequest } from 'next/server';
 import { securityLogger, SecurityEventType, logCredentialsEvent } from '../../app/lib/security-logger';
 import { tokenStorage } from '../../app/lib/token-storage';
@@ -644,6 +644,15 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       // Add explicit wait for async operations to complete
       await new Promise(resolve => setTimeout(resolve, 0));
 
+      // Spy on tokenRefreshManager.refreshAccessToken method
+      const refreshSpy = spyOn(tokenRefreshManager, 'refreshAccessToken');
+      refreshSpy.mockResolvedValue({
+        success: true,
+        accessToken: 'new_access_token',
+        refreshToken: 'new_refresh_token',
+        expiresAt: Math.floor(Date.now() / 1000) + 3600
+      });
+
       // Mock 401 response first, then successful response
       let callCount = 0;
       mockFetchImpl = async (input: RequestInfo | URL): Promise<Response> => {
@@ -678,6 +687,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       // Should succeed after automatic refresh
       expect(result).toBeDefined();
 
+      // Verify refreshAccessToken was called
+      expect(refreshSpy).toHaveBeenCalledWith(userId);
+
       // Verify automatic refresh is logged
       const logs = securityLogger.getRecentLogs();
       const autoRefreshLogs = logs.filter(log =>
@@ -685,6 +697,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
         log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
       );
       expect(autoRefreshLogs.length).toBeGreaterThan(0);
+
+      // Restore the spy
+      refreshSpy.mockRestore();
     });
 
     test('should maintain security across all endpoints', async () => {
@@ -704,13 +719,11 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
         }));
 
         // Mock SpotifyProxy methods to avoid external API calls
-        const originalMakeAuthenticatedRequest = SpotifyProxy.makeAuthenticatedRequest;
-        const originalGetTopTracks = SpotifyProxy.getTopTracks;
-        const originalGetPlaylists = SpotifyProxy.getPlaylists;
+        const getPlaylistsSpy = spyOn(SpotifyProxy, 'getPlaylists');
+        const getTopTracksSpy = spyOn(SpotifyProxy, 'getTopTracks');
         
-        SpotifyProxy.makeAuthenticatedRequest = async () => ({ items: [] });
-        SpotifyProxy.getTopTracks = async () => ({ items: [] });
-        SpotifyProxy.getPlaylists = async () => ({ items: [] });
+        getPlaylistsSpy.mockResolvedValue({ items: [] });
+        getTopTracksSpy.mockResolvedValue({ items: [] });
 
         // Import and test endpoint
         if (endpoint.path.includes('top-songs')) {
@@ -724,10 +737,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           expect(response.status).toBe(200);
         }
         
-        // Restore original methods
-        SpotifyProxy.makeAuthenticatedRequest = originalMakeAuthenticatedRequest;
-        SpotifyProxy.getTopTracks = originalGetTopTracks;
-        SpotifyProxy.getPlaylists = originalGetPlaylists;
+        // Restore the spies
+        getPlaylistsSpy.mockRestore();
+        getTopTracksSpy.mockRestore();
         
         // Add explicit wait for async operations to complete
         await new Promise(resolve => setTimeout(resolve, 0));
