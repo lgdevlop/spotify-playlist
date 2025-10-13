@@ -662,9 +662,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       };
       global.fetch = mockFetchImpl as typeof global.fetch;
 
-      console.log('SpotifyProxy properties:', Object.getOwnPropertyNames(SpotifyProxy))
-      console.log('SpotifyProxy.makeAuthenticatedRequest:', SpotifyProxy.makeAuthenticatedRequest)
-      console.log('SpotifyProxy:', (SpotifyProxy))
+      console.info('SpotifyProxy properties:', Object.getOwnPropertyNames(SpotifyProxy))
+      console.info('SpotifyProxy.makeAuthenticatedRequest:', SpotifyProxy.makeAuthenticatedRequest)
+      console.info('SpotifyProxy:', (SpotifyProxy))
       const result = await SpotifyProxy.makeAuthenticatedRequest(
         '/me/top/tracks',
         accessToken,
