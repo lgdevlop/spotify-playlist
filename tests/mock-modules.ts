@@ -23,6 +23,7 @@ export const mockModule = async (
   return {
     [Symbol.dispose]: () => {
       mock.module(modulePath, () => original);
+      console.info(`Releasing the ${modulePath}`)
     },
   };
 };
