@@ -662,7 +662,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       };
       global.fetch = mockFetchImpl as typeof global.fetch;
 
-      // Make API call that should trigger automatic refresh using the real SpotifyProxy
+      console.log('SpotifyProxy properties:', Object.getOwnPropertyNames(SpotifyProxy))
+      console.log('SpotifyProxy.makeAuthenticatedRequest:', SpotifyProxy.makeAuthenticatedRequest)
+      console.log('SpotifyProxy:', (SpotifyProxy))
       const result = await SpotifyProxy.makeAuthenticatedRequest(
         '/me/top/tracks',
         accessToken,
