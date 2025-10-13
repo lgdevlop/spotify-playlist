@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { securityLogger, SecurityEventType, logCredentialsEvent } from '../../app/lib/security-logger';
 import { tokenStorage } from '../../app/lib/token-storage';
 import { tokenRefreshManager } from '../../app/lib/token-refresh-manager';
+import { SpotifyProxy } from '../../app/lib/spotify-proxy';
 
 interface SpotifyConfig {
   clientId: string;
@@ -632,8 +633,6 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
     });
 
     test('should handle SpotifyProxy automatic token refresh securely', async () => {
-      const { SpotifyProxy } = await import('../../app/lib/spotify-proxy');
-
       const userId = 'test_user_123';
       const accessToken = 'expired_access_token';
       const refreshToken = 'secure_refresh_token';
@@ -663,7 +662,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       };
       global.fetch = mockFetchImpl as typeof global.fetch;
 
-      // Make API call that should trigger automatic refresh
+      // Make API call that should trigger automatic refresh using the real SpotifyProxy
       const result = await SpotifyProxy.makeAuthenticatedRequest(
         '/me/top/tracks',
         accessToken,
@@ -685,53 +684,59 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       expect(autoRefreshLogs.length).toBeGreaterThan(0);
     });
 
-    // test('should maintain security across all endpoints', async () => {
-    //   // Test all major endpoints to ensure no refresh token exposure
-    //   const endpoints = [
-    //     { path: '/api/spotify/top-songs', method: 'GET' },
-    //     { path: '/api/spotify/top-playlists', method: 'GET' }
-    //   ];
+    test('should maintain security across all endpoints', async () => {
+      // Test all major endpoints to ensure no refresh token exposure
+      const endpoints = [
+        { path: '/api/spotify/top-songs', method: 'GET' },
+        { path: '/api/spotify/top-playlists', method: 'GET' }
+      ];
 
-    //   for (const endpoint of endpoints) {
-    //     // Mock successful responses
-    //     mock.module('next-auth/next', () => ({
-    //       getServerSession: async () => ({
-    //         accessToken: 'test_access_token',
-    //         spotifyId: 'test_user_123'
-    //       }),
-    //     }));
+      for (const endpoint of endpoints) {
+        // Mock successful responses
+        mock.module('next-auth/next', () => ({
+          getServerSession: async () => ({
+            accessToken: 'test_access_token',
+            spotifyId: 'test_user_123'
+          }),
+        }));
 
-    //     mock.module('@/app/lib/spotify-proxy', () => ({
-    //       SpotifyProxy: {
-    //         makeAuthenticatedRequest: async (endpoint: string, accessToken: string, userId?: string) => ({ items: [] }),
-    //         getTopTracks: async () => ({ items: [] }),
-    //         getPlaylists: async () => ({ items: [] })
-    //       }
-    //     }));
-
-    //     // Import and test endpoint
-    //     if (endpoint.path.includes('top-songs')) {
-    //       const { GET: topSongsGet } = await import('../../app/api/spotify/top-songs/route');
-    //       const request = new NextRequest(`http://localhost:3000${endpoint.path}`);
-    //       const response = await topSongsGet(request);
-    //       expect(response.status).toBe(200);
-    //     } else if (endpoint.path.includes('top-playlists')) {
-    //       const { GET: topPlaylistsGet } = await import('../../app/api/spotify/top-playlists/route');
-    //       const response = await topPlaylistsGet();
-    //       expect(response.status).toBe(200);
-    //     }
+        // Mock SpotifyProxy methods to avoid external API calls
+        const originalMakeAuthenticatedRequest = SpotifyProxy.makeAuthenticatedRequest;
+        const originalGetTopTracks = SpotifyProxy.getTopTracks;
+        const originalGetPlaylists = SpotifyProxy.getPlaylists;
         
-    //     // Add explicit wait for async operations to complete
-    //     await new Promise(resolve => setTimeout(resolve, 0));
-    //   }
+        SpotifyProxy.makeAuthenticatedRequest = async () => ({ items: [] });
+        SpotifyProxy.getTopTracks = async () => ({ items: [] });
+        SpotifyProxy.getPlaylists = async () => ({ items: [] });
 
-    //   // Verify no refresh tokens are exposed in any logs
-    //   const logs = securityLogger.getRecentLogs();
-    //   logs.forEach(log => {
-    //     expect(log.details?.refreshToken).toBeUndefined();
-    //     expect(log.details?.refresh_token).toBeUndefined();
-    //   });
-    // });
+        // Import and test endpoint
+        if (endpoint.path.includes('top-songs')) {
+          const { GET: topSongsGet } = await import('../../app/api/spotify/top-songs/route');
+          const request = new NextRequest(`http://localhost:3000${endpoint.path}`);
+          const response = await topSongsGet(request);
+          expect(response.status).toBe(200);
+        } else if (endpoint.path.includes('top-playlists')) {
+          const { GET: topPlaylistsGet } = await import('../../app/api/spotify/top-playlists/route');
+          const response = await topPlaylistsGet();
+          expect(response.status).toBe(200);
+        }
+        
+        // Restore original methods
+        SpotifyProxy.makeAuthenticatedRequest = originalMakeAuthenticatedRequest;
+        SpotifyProxy.getTopTracks = originalGetTopTracks;
+        SpotifyProxy.getPlaylists = originalGetPlaylists;
+        
+        // Add explicit wait for async operations to complete
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+
+      // Verify no refresh tokens are exposed in any logs
+      const logs = securityLogger.getRecentLogs();
+      logs.forEach(log => {
+        expect(log.details?.refreshToken).toBeUndefined();
+        expect(log.details?.refresh_token).toBeUndefined();
+      });
+    });
   });
 
   describe('Security Compliance Validation', () => {
