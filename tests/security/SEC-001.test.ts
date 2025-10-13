@@ -2,15 +2,19 @@
 import { test, expect, mock, describe, afterAll, vi, afterEach } from 'bun:test';
 import { NextRequest } from 'next/server';
 
+import { SpotifyProxy } from '@/app/lib/spotify-proxy';
+
 interface SpotifyConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
 }
 
-// afterAll(() => {
-//   vi.restoreAllMocks()
-// });
+afterAll(() => {
+  mock.module("@/app/lib/spotify-proxy", () => ({
+    SpotifyProxy
+  }))
+});
 
 // afterEach(() => {
 //   vi.restoreAllMocks()

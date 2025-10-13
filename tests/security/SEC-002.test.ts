@@ -1,10 +1,10 @@
 // Mocks must be defined before imports that use them
-import { test, expect, describe, beforeEach, afterEach, spyOn } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach, spyOn, afterAll, mock } from 'bun:test';
 import { NextRequest } from 'next/server';
 import { securityLogger, SecurityEventType, logCredentialsEvent } from '../../app/lib/security-logger';
 import { tokenStorage } from '../../app/lib/token-storage';
 import { tokenRefreshManager } from '../../app/lib/token-refresh-manager';
-import { SpotifyProxy } from '../../app/lib/spotify-proxy';
+import { SpotifyProxy } from '@/app/lib/spotify-proxy';
 import { mockModule } from '../mock-modules';
 
 interface SpotifyConfig {
@@ -60,6 +60,12 @@ mockModule('@/app/lib/crypto', () => ({
     return encryptedDataStore.get(id) || 'decrypted_data';
   }
 }));
+
+afterAll(() => {
+  mock.module("@/app/lib/spotify-proxy", () => ({
+    SpotifyProxy
+  }))
+});
 
 // Mock environment variables
 process.env.SPOTIFY_ENCRYPTION_KEY = 'a'.repeat(64); // 32 bytes in hex
