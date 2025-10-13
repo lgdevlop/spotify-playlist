@@ -1,5 +1,5 @@
 // Mocks must be defined before imports that use them
-import { test, expect, mock, describe } from 'bun:test';
+import { test, expect, mock, describe, afterAll, vi } from 'bun:test';
 import { NextRequest } from 'next/server';
 
 interface SpotifyConfig {
@@ -7,6 +7,10 @@ interface SpotifyConfig {
   clientSecret: string;
   redirectUri: string;
 }
+
+afterAll(() => {
+  vi.restoreAllMocks()
+});
 
 // Mock next/headers to avoid "cookies called outside request scope" error and for getServerSession
 mock.module('next/headers', () => ({
@@ -331,9 +335,11 @@ describe('SEC-001: Client Secret Exposure', () => {
     // Mock SpotifyProxy
     mock.module('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
+        // makeAuthenticatedRequest: async () => ({ items: [] }),
         getTopTracks: async () => ({
           items: [{ name: 'Mock Song', id: 'mock_id' }],
         }),
+        // getPlaylists: async () => ({ items: [] }),
       },
     }));
 
@@ -344,5 +350,8 @@ describe('SEC-001: Client Secret Exposure', () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(data.items)).toBe(true);
     expect(data).not.toHaveProperty('clientSecret');
+
+    mock.clearAllMocks()
+    mock.restore()
   });
 });
