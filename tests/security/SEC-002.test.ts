@@ -63,20 +63,52 @@ mock.module('@/app/lib/crypto', () => ({
 process.env.SPOTIFY_ENCRYPTION_KEY = 'a'.repeat(64); // 32 bytes in hex
 
 describe('SEC-002: Refresh Token Exposure Security', () => {
+  let originalFetch: typeof global.fetch;
+  let mockFetchImpl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
   beforeEach(() => {
-    // Clear logs and reset mocks before each test
+    // Store original fetch to restore later
+    originalFetch = global.fetch;
+    
+    // Create a mock implementation for fetch
+    mockFetchImpl = async (): Promise<Response> => {
+      return new Response(JSON.stringify({}), { status: 200 });
+    };
+    
+    // Override global fetch with our mock
+    global.fetch = mockFetchImpl as typeof global.fetch;
+    
+    // Clear logs and reset state of all singletons
     securityLogger.clearLogs();
     tokenStorage.clearAll();
     tokenRefreshManager.clearRateLimits();
     encryptedDataStore.clear();
+    
+    // Stop any running cleanup timers
+    tokenStorage.stopCleanupTimer();
+    
+    // Clear logs again after stopping timers to ensure clean state
+    securityLogger.clearLogs();
+    
+    // Verify all singletons are in clean state
+    expect(securityLogger.getRecentLogs()).toHaveLength(0);
+    expect(tokenStorage.getStats().totalTokens).toBe(0);
+    expect(tokenRefreshManager.getRateLimitStats().totalUsers).toBe(0);
+    expect(encryptedDataStore.size).toBe(0);
   });
 
   afterEach(() => {
+    // Restore original fetch
+    global.fetch = originalFetch;
+    
     // Clean up after each test
     securityLogger.clearLogs();
     tokenStorage.clearAll();
     tokenRefreshManager.clearRateLimits();
     encryptedDataStore.clear();
+    
+    // Stop any running cleanup timers
+    tokenStorage.stopCleanupTimer();
   });
 
   describe('Token Storage Security', () => {
@@ -87,6 +119,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, expiresAt);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Verify token is stored
       const retrievedToken = await tokenStorage.getToken(userId);
@@ -111,25 +146,30 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, expiresAt);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock integrity check to fail by temporarily replacing the method
       const tokenStorageInstance = tokenStorage as unknown as { validateIntegrity: (data: unknown) => boolean };
       const originalValidateIntegrity = tokenStorageInstance.validateIntegrity;
       tokenStorageInstance.validateIntegrity = () => false; // Simulate integrity failure
 
-      // Should return null on integrity failure
-      const retrievedToken = await tokenStorage.getToken(userId);
-      expect(retrievedToken).toBeNull();
+      try {
+        // Should return null on integrity failure
+        const retrievedToken = await tokenStorage.getToken(userId);
+        expect(retrievedToken).toBeNull();
 
-      // Restore original method
-      tokenStorageInstance.validateIntegrity = originalValidateIntegrity;
-
-      // Verify integrity failure is logged
-      const logs = securityLogger.getRecentLogs();
-      const integrityLogs = logs.filter(log =>
-        log.eventType === SecurityEventType.SEC_002_TOKEN_INTEGRITY_FAILED
-      );
-      expect(integrityLogs.length).toBeGreaterThan(0);
+        // Verify integrity failure is logged
+        const logs = securityLogger.getRecentLogs();
+        const integrityLogs = logs.filter(log =>
+          log.eventType === SecurityEventType.SEC_002_TOKEN_INTEGRITY_FAILED
+        );
+        expect(integrityLogs.length).toBeGreaterThan(0);
+      } finally {
+        // Always restore original method in finally block
+        tokenStorageInstance.validateIntegrity = originalValidateIntegrity;
+      }
     });
 
     test('should handle expired tokens appropriately', async () => {
@@ -139,6 +179,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store expired token
       await tokenStorage.storeToken(userId, refreshToken, expiredTime);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should return null for expired token
       const retrievedToken = await tokenStorage.getToken(userId);
@@ -146,7 +189,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify expiration is logged
       const logs = securityLogger.getRecentLogs();
-      const expiredLogs = logs.filter(log => 
+      const expiredLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_TOKEN_EXPIRED
       );
       expect(expiredLogs.length).toBeGreaterThan(0);
@@ -161,9 +204,15 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       // Store expired and valid tokens
       await tokenStorage.storeToken(userId1, 'expired_token', expiredTime);
       await tokenStorage.storeToken(userId2, 'valid_token', validTime);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Run cleanup
       const removedCount = await tokenStorage.cleanup();
+      
+      // Add explicit wait for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should remove only expired token
       expect(removedCount).toBe(1);
@@ -185,9 +234,12 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock successful Spotify API response
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         return new Response(JSON.stringify({
           access_token: 'new_access_token',
           token_type: 'Bearer',
@@ -195,15 +247,13 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           refresh_token: 'new_refresh_token'
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       // Refresh token
       const result = await tokenRefreshManager.refreshAccessToken(userId, '127.0.0.1');
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Verify successful refresh
       expect(result.success).toBe(true);
@@ -212,7 +262,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify security events are logged
       const logs = securityLogger.getRecentLogs();
-      const refreshLogs = logs.filter(log => 
+      const refreshLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
       );
       expect(refreshLogs.length).toBeGreaterThan(0);
@@ -230,12 +280,17 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Make multiple requests to trigger rate limiting
       const results = [];
       for (let i = 0; i < 6; i++) {
         const result = await tokenRefreshManager.refreshAccessToken(userId, '127.0.0.1');
         results.push(result);
+        // Add small delay between requests to ensure proper rate limiting
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
 
       // Should hit rate limit after 5 requests
@@ -244,7 +299,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify rate limit events are logged
       const logs = securityLogger.getRecentLogs();
-      const rateLimitLogs = logs.filter(log => 
+      const rateLimitLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_RATE_LIMIT_EXCEEDED
       );
       expect(rateLimitLogs.length).toBeGreaterThan(0);
@@ -255,6 +310,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Try to refresh without stored token
       const result = await tokenRefreshManager.refreshAccessToken(userId, '127.0.0.1');
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should fail gracefully
       expect(result.success).toBe(false);
@@ -262,7 +320,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify failure is logged
       const logs = securityLogger.getRecentLogs();
-      const failureLogs = logs.filter(log => 
+      const failureLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_REFRESH_FAILURE
       );
       expect(failureLogs.length).toBeGreaterThan(0);
@@ -274,10 +332,13 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock Spotify API to fail temporarily
       let callCount = 0;
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         callCount++;
         if (callCount <= 2) {
           return new Response(JSON.stringify({ error: 'temporarily_unavailable' }), { status: 503 });
@@ -288,16 +349,18 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           expires_in: 3600
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
+      // Start timing
       const startTime = Date.now();
+      
+      // Run the refresh - in test environment it will use reduced delays
       const result = await tokenRefreshManager.refreshAccessToken(userId, '127.0.0.1');
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
       const endTime = Date.now();
-
-      // Restore fetch
-      global.fetch = originalFetch;
 
       // Should eventually succeed after retries
       expect(result.success).toBe(true);
@@ -324,9 +387,12 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock successful Spotify API response
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         return new Response(JSON.stringify({
           access_token: 'new_access_token',
           token_type: 'Bearer',
@@ -334,9 +400,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           refresh_token: 'new_refresh_token'
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       const request = new NextRequest('http://localhost:3000/api/spotify/secure-refresh', {
         method: 'POST',
@@ -348,9 +412,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       const response = await secureRefreshPost(request);
       const data = await response.json();
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should return new tokens without exposing them in logs
       expect(response.status).toBe(200);
@@ -369,16 +433,14 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       const { POST: secureRefreshPost } = await import('../../app/api/spotify/secure-refresh/route');
 
       // Mock successful Spotify API response for legacy mode
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         return new Response(JSON.stringify({
           access_token: 'legacy_access_token',
           token_type: 'Bearer',
           expires_in: 3600
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       const request = new NextRequest('http://localhost:3000/api/spotify/secure-refresh', {
         method: 'POST',
@@ -390,9 +452,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       const response = await secureRefreshPost(request);
       const data = await response.json();
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should fall back to legacy mode but still work
       expect(response.status).toBe(200);
@@ -423,6 +485,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
         const response = await secureRefreshPost(request);
         
+        // Add explicit wait for async operations to complete
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
         if (response.status === 429) {
           // Verify rate limiting headers are present
           expect(response.headers.get('Retry-After')).toBeTruthy();
@@ -431,6 +496,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           expect(response.headers.get('X-RateLimit-Reset')).toBeTruthy();
           break;
         }
+        
+        // Add small delay between requests to ensure proper rate limiting
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
     });
   });
@@ -444,18 +512,19 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock successful Spotify API response
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         return new Response(JSON.stringify({
           access_token: 'new_access_token',
           token_type: 'Bearer',
           expires_in: 3600
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       const request = new NextRequest('http://localhost:3000/api/spotify/auth/refresh', {
         method: 'POST',
@@ -467,9 +536,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       const response = await refreshPost(request);
       const data = await response.json();
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should prefer userId-based refresh
       expect(response.status).toBe(200);
@@ -477,8 +546,8 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify userId-based refresh is logged
       const logs = securityLogger.getRecentLogs();
-      const userIdLogs = logs.filter(log => 
-        log.details?.source === 'refresh_endpoint' && 
+      const userIdLogs = logs.filter(log =>
+        log.details?.source === 'refresh_endpoint' &&
         log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
       );
       expect(userIdLogs.length).toBeGreaterThan(0);
@@ -488,16 +557,14 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
       const { POST: refreshPost } = await import('../../app/api/spotify/auth/refresh/route');
 
       // Mock successful Spotify API response
-      const mockFetch = async (): Promise<Response> => {
+      mockFetchImpl = async (): Promise<Response> => {
         return new Response(JSON.stringify({
           access_token: 'legacy_access_token',
           token_type: 'Bearer',
           expires_in: 3600
         }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       const request = new NextRequest('http://localhost:3000/api/spotify/auth/refresh', {
         method: 'POST',
@@ -506,9 +573,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       const response = await refreshPost(request);
       const data = await response.json();
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should work with legacy approach
       expect(response.status).toBe(200);
@@ -516,8 +583,8 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify legacy fallback is logged
       const logs = securityLogger.getRecentLogs();
-      const legacyLogs = logs.filter(log => 
-        log.details?.source === 'refresh_endpoint_legacy' && 
+      const legacyLogs = logs.filter(log =>
+        log.details?.source === 'refresh_endpoint_legacy' &&
         log.eventType === SecurityEventType.CREDENTIALS_FALLBACK_SUCCESS
       );
       expect(legacyLogs.length).toBeGreaterThan(0);
@@ -538,10 +605,13 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store refresh token securely
       await tokenStorage.storeToken(
-        mockProfile.id, 
-        mockAccount.refresh_token, 
+        mockProfile.id,
+        mockAccount.refresh_token,
         mockAccount.expires_at
       );
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Verify token is stored securely
       const storedToken = await tokenStorage.getToken(mockProfile.id);
@@ -549,7 +619,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Verify secure storage events are logged
       const logs = securityLogger.getRecentLogs();
-      const storeLogs = logs.filter(log => 
+      const storeLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_TOKEN_STORED
       );
       expect(storeLogs.length).toBeGreaterThan(0);
@@ -570,10 +640,14 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Mock 401 response first, then successful response
       let callCount = 0;
-      const mockFetch = async (url: string): Promise<Response> => {
+      mockFetchImpl = async (input: RequestInfo | URL): Promise<Response> => {
+        const url = typeof input === 'string' ? input : input.toString();
         callCount++;
         if (url.includes('api.spotify.com') && callCount === 1) {
           return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401 });
@@ -587,9 +661,7 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
         }
         return new Response(JSON.stringify({ items: [] }), { status: 200 });
       };
-      const originalFetch = global.fetch;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any) = mockFetch;
+      global.fetch = mockFetchImpl as typeof global.fetch;
 
       // Make API call that should trigger automatic refresh
       const result = await SpotifyProxy.makeAuthenticatedRequest(
@@ -597,17 +669,17 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
         accessToken,
         userId
       );
-
-      // Restore fetch
-      global.fetch = originalFetch;
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Should succeed after automatic refresh
       expect(result).toBeDefined();
 
       // Verify automatic refresh is logged
       const logs = securityLogger.getRecentLogs();
-      const autoRefreshLogs = logs.filter(log => 
-        log.details?.source === 'spotify_proxy' && 
+      const autoRefreshLogs = logs.filter(log =>
+        log.details?.source === 'spotify_proxy' &&
         log.eventType === SecurityEventType.SEC_002_REFRESH_SUCCESS
       );
       expect(autoRefreshLogs.length).toBeGreaterThan(0);
@@ -647,6 +719,9 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
           const response = await topPlaylistsGet();
           expect(response.status).toBe(200);
         }
+        
+        // Add explicit wait for async operations to complete
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       // Verify no refresh tokens are exposed in any logs
@@ -695,27 +770,33 @@ describe('SEC-002: Refresh Token Exposure Security', () => {
 
       // Store token
       await tokenStorage.storeToken(userId, refreshToken, Math.floor(Date.now() / 1000) + 3600);
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Attempt refresh
       await tokenRefreshManager.refreshAccessToken(userId, '127.0.0.1');
+      
+      // Add explicit wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // Verify complete audit trail
       const logs = securityLogger.getRecentLogs();
       
       // Should have token storage event
-      const storageLogs = logs.filter(log => 
+      const storageLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_TOKEN_STORED
       );
       expect(storageLogs.length).toBeGreaterThan(0);
 
       // Should have refresh attempt event
-      const attemptLogs = logs.filter(log => 
+      const attemptLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_REFRESH_ATTEMPT
       );
       expect(attemptLogs.length).toBeGreaterThan(0);
 
       // Should have token retrieval event
-      const retrievalLogs = logs.filter(log => 
+      const retrievalLogs = logs.filter(log =>
         log.eventType === SecurityEventType.SEC_002_TOKEN_RETRIEVED
       );
       expect(retrievalLogs.length).toBeGreaterThan(0);
