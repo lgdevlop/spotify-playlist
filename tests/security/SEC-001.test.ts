@@ -8,16 +8,16 @@ interface SpotifyConfig {
   redirectUri: string;
 }
 
-afterAll(() => {
-  vi.restoreAllMocks()
-});
+// afterAll(() => {
+//   vi.restoreAllMocks()
+// });
 
-afterEach(() => {
-  vi.restoreAllMocks()
-});
+// afterEach(() => {
+//   vi.restoreAllMocks()
+// });
 
 // Mock next/headers to avoid "cookies called outside request scope" error and for getServerSession
-mock.module('next/headers', () => ({
+mockModule('next/headers', () => ({
   cookies: () => ({
     get: () => null,
     set: () => {},
@@ -37,19 +37,19 @@ mock.module('next/headers', () => ({
 }));
 
 // Mock next-auth getServerSession to return mock session for top endpoints
-mock.module('next-auth/next', () => ({
+mockModule('next-auth/next', () => ({
   getServerSession: async () => ({
     accessToken: 'mock_access_token',
   }),
 }));
 
 // Mock authOptions
-mock.module('@/app/lib/auth', () => ({
+mockModule('@/app/lib/auth', () => ({
   authOptions: () => ({}),
 }));
 
 // Mock session-manager functions (actual import path)
-mock.module('@/app/lib/session-manager', () => ({
+mockModule('@/app/lib/session-manager', () => ({
   storeSpotifyConfig: async (): Promise<void> => {
     // Mock successful storage
     return;
@@ -59,7 +59,7 @@ mock.module('@/app/lib/session-manager', () => ({
 }));
 
 // Mock decryptAesKey to return valid 32-byte AES key
-mock.module('@/app/api/crypto/public-key/route', () => ({
+mockModule('@/app/api/crypto/public-key/route', () => ({
   decryptAesKey: async (): Promise<Buffer> => {
     const bytes = new Uint8Array(32);
     for (let i = 0; i < 32; i++) {
@@ -72,6 +72,7 @@ mock.module('@/app/api/crypto/public-key/route', () => ({
 // Now import the routes after mocks
 import { GET, POST as configPost } from '../../app/api/config/route';
 import { POST as validatePost } from '../../app/api/spotify/validate/route';
+import { mockModule } from '../mock-modules';
 
 describe('SEC-001: Client Secret Exposure', () => {
   test('should not expose client secret in /api/config GET', async () => {
@@ -185,7 +186,7 @@ describe('SEC-001: Client Secret Exposure', () => {
 
   test('should handle decryption failure gracefully without exposing secrets', async () => {
     // Mock decryptAesKey to throw error (after structure validation)
-    mock.module('@/app/api/crypto/public-key/route', () => ({
+    mockModule('@/app/api/crypto/public-key/route', () => ({
       decryptAesKey: async (): Promise<Buffer> => { throw new Error('Decryption failed'); },
     }));
 
@@ -218,7 +219,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { POST: exchangePost } = await import('../../app/api/spotify/auth/exchange/route');
 
     // Mock getSpotifyConfig to return credentials
-    mock.module('@/app/lib/session-manager', () => ({
+    mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -260,7 +261,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { POST: refreshPost } = await import('../../app/api/spotify/auth/refresh/route');
 
     // Mock getSpotifyConfig to return credentials
-    mock.module('@/app/lib/session-manager', () => ({
+    mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -299,7 +300,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { GET: topPlaylistsGet } = await import('../../app/api/spotify/top-playlists/route');
 
     // Mock getSpotifyConfig to return credentials for authOptions
-    mock.module('@/app/lib/session-manager', () => ({
+    mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -308,7 +309,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     }));
 
     // Mock SpotifyProxy
-    mock.module('@/app/lib/spotify-proxy', () => ({
+    mockModule('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
         getPlaylists: async () => ({
           items: [{ name: 'Mock Playlist', id: 'mock_id' }],
@@ -328,7 +329,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     const { GET: topSongsGet } = await import('../../app/api/spotify/top-songs/route');
 
     // Mock getSpotifyConfig to return credentials for authOptions
-    mock.module('@/app/lib/session-manager', () => ({
+    mockModule('@/app/lib/session-manager', () => ({
       getSpotifyConfig: async () => ({
         clientId: 'test',
         clientSecret: 'secret',
@@ -337,7 +338,7 @@ describe('SEC-001: Client Secret Exposure', () => {
     }));
 
     // Mock SpotifyProxy
-    mock.module('@/app/lib/spotify-proxy', () => ({
+    mockModule('@/app/lib/spotify-proxy', () => ({
       SpotifyProxy: {
         makeAuthenticatedRequest: async () => ({ items: [] }),
         getTopTracks: async () => ({
